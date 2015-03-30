@@ -182,7 +182,7 @@ void HIBE::IdealTrapGen() {
         }//end-if        
     }//end-for
     
-    /* Post-processing. If iStar is different of 1 (paper notation), we must swap columns 1 and iStar */    
+    /* Post-processing. If iStar is different of 1 (paper notation), we need to swap columns 1 and iStar */    
     if(iStar != 0) {
         for(i = 0; i < H[0].length(); i++) {
             aux_swap = H[i][iStar];
