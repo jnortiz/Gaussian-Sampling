@@ -1,6 +1,6 @@
 /* 
  * File:   HIBE.cpp
- * Author: Jheyne Nayara Ortiz
+ * Author: jnortiz
  * 
  * Created on March 10, 2015, 4:12 PM
  * 
@@ -21,23 +21,23 @@ using namespace NTL;
 
 HIBE::HIBE(double q, int m1, int m2, int k) {
         
-    this->SetLambda(ceil(1 + (log(q)/log(2))));    
-    this->SetM(m1 + m2);
-    this->SetN(pow(2, k));
-    this->SetQ(q);
-    this->SetM1(m1);
-    this->SetM2(m2);
-    this->SetK(k);    
-    this->SetR(ceil((double)(1 + (log(q)/log(3)))));
+    this->lambda = ceil(1 + (log(q)/log(2)));    
+    this->m = m1 + m2;
+    this->n = pow(2, k);
+    this->q = q;
+    this->m1 = m1;
+    this->m2 = m2;
+    this->k = k;    
+    this->r = ceil((double)(1 + (log(q)/log(3))));
     
-    ZZ_p::init(conv<ZZ>(q)); // Modulo of coefficients
+    ZZ_p::init(conv<ZZ>(q)); // Coefficients modulo
 
     ZZ_pX f;
     f.SetLength(this->n);
     SetCoeff(f, 0, 1);
     SetCoeff(f, this->n, 1);
-    this->SetF(f);
-    ZZ_pE::init(f); // Modulo of ring elements
+    this->f = f;
+    ZZ_pE::init(f); // Ring elements modulo
         
 }
 
@@ -48,7 +48,7 @@ HIBE::~HIBE() {
     // TODO
 }
 
-void HIBE::Setup(int mu) {
+void HIBE::Setup(int h) {
     
     /* The IdealTrapGen algorithm selects uniformly a random vector A and a short basis S = msk */
     cout << "[*] IdealTrapGen status: ";
@@ -59,7 +59,7 @@ void HIBE::Setup(int mu) {
     
     /* The A_prime matrix contains uniformly random vectors, one for each hierarchy level */
     int i, j;
-    this->A_prime.SetLength(mu);
+    this->A_prime.SetLength(h);
     for(i = 0; i < A_prime.length(); i++) {
         this->A_prime[i].SetLength(this->m);
         for(j = 0; j < A_prime[0].length(); j++)
@@ -381,15 +381,14 @@ int HIBE::IdealTrapGen() {
     this->Concat(A, A1, A2);
     
     if(this->FinalVerification(A, S)) {
-        this->SetA(A);
-        this->SetMsk(S);
+        this->A = A;
+        this->msk = S;
         return 1;
     } else
         return 0;
     
 }//end-IdealTrapGen()
 
-// Binary decomposition of each row of H'.
 void HIBE::Decomp(Vec< Vec<ZZX> >& _W, const Vec<ZZX>& _h) {
     
     ZZ coeff;   
@@ -417,7 +416,6 @@ void HIBE::Decomp(Vec< Vec<ZZX> >& _W, const Vec<ZZX>& _h) {
     
 }//end-Decomp()
 
-/* This multiplication was designed to verify that H*A1 = 0 -- for each row */
 void HIBE::Mult(ZZ_pX& c, const Vec<ZZX>& a, const Vec<ZZ_pX>& b, const ZZ_pX& f) {
     
     ZZ_pX acc;
@@ -430,14 +428,12 @@ void HIBE::Mult(ZZ_pX& c, const Vec<ZZX>& a, const Vec<ZZ_pX>& b, const ZZ_pX& f
         c += acc;
     }//end-for
                               
-}//end-for
+}
 
-/* Function used in W's construction */
 void HIBE::Mult(Vec<ZZX>& c, const ZZ_pX& a, const Vec<ZZX>& b) {
     
-    for(int i = 0; i < b.length(); i++) {
+    for(int i = 0; i < b.length(); i++)
         mul(c[i], conv<ZZX>(a), b[i]);
-    }
 
 }
 
@@ -448,7 +444,6 @@ void HIBE::Mult(Vec<ZZX>& c, const ZZX& a, const Vec<ZZX>& b) {
     
 }
 
-/* Used in Tk^{-1}*Wj -- G's construction */
 void HIBE::Mult(Vec< Vec<ZZX> >& c, const Vec< Vec<ZZX> >& a, const Vec< Vec<ZZX> >& b) {       
     
     Vec<ZZX> column;
@@ -467,7 +462,6 @@ void HIBE::Mult(Vec< Vec<ZZX> >& c, const Vec< Vec<ZZX> >& a, const Vec< Vec<ZZX
     }
 }
 
-//[*]
 void HIBE::Mult(ZZX& c, const Vec<ZZX>& a, const Vec<ZZX>& b) {
     
     ZZX out;
@@ -482,7 +476,6 @@ void HIBE::Mult(ZZX& c, const Vec<ZZX>& a, const Vec<ZZX>& b) {
                               
 }//end-for
 
-// A2 = -U*A1
 void HIBE::Mult(Vec<ZZ_pX>& c /*A2*/, const Vec< Vec<ZZX> >& a /*-U*/, const Vec<ZZ_pX>& b/*A1*/) {
     
     c.SetLength(a.length());
@@ -492,7 +485,6 @@ void HIBE::Mult(Vec<ZZ_pX>& c /*A2*/, const Vec< Vec<ZZX> >& a /*-U*/, const Vec
     
 }
 
-//[1]
 void HIBE::Mult(ZZ_pX& c, const Vec<ZZX>& a, const Vec<ZZ_pX>& b) {
     
     ZZ_pX out;

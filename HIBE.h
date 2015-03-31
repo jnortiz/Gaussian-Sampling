@@ -23,104 +23,22 @@ public:
     virtual ~HIBE();    
     
     /* Functions */
-    void Setup(int mu);    
+    void Setup(int h);    
     
-    int GetM() const {
-        return m;
-    }
-
-    int GetN() const {
-        return n;
-    }
-    
-    long GetM() {
-        return m;
-    }
-
-    void SetM(long m) {
-        this->m = m;
-    }
-
-    long GetN() {
-        return n;
-    }
-
-    void SetN(long n) {
-        this->n = n;
-    }
-    
-    ZZ_pX GetF() const {
-        return f;
-    }
-
-    void SetF(ZZ_pX f) {
-        this->f = f;
-    }
-
-    long GetM1() const {
-        return m1;
-    }
-
-    void SetM1(long m1) {
-        this->m1 = m1;
-    }
-
-    long GetM2() const {
-        return m2;
-    }
-
-    void SetM2(long m2) {
-        this->m2 = m2;
-    }
-    
-    double GetR() const {
-        return r;
-    }
-    
-    void SetR(double r) {
-        this->r = r;
-    }
-    
-    double GetQ() const {
-        return q;
-    }
-
-    void SetQ(double q) {
-        this->q = q;
-    }
-    
-    double GetLambda() const {
-        return lambda;
-    }
-
-    void SetLambda(double lambda) {
-        this->lambda = lambda;
-    }
-    
-    int GetK() const {
-        return k;
-    }
-
-    void SetK(int k) {
-        this->k = k;
-    }
-    
-    Vec<ZZ_pX> GetA() const {
-        return A;
-    }
-
-    void SetA(Vec<ZZ_pX> A) {
-        this->A = A;
-    }
-    
-    Vec<Vec<ZZX> > GetMsk() const {
-        return msk;
-    }
-
-    void SetMsk(Vec<Vec<ZZX> > msk) {
-        this->msk = msk;
-    }
-
+    /* Getters */
+    long GetM() { return m; }    
+    long GetN() { return n; }
+    ZZ_pX GetF() const { return f; }
+    long GetM1() const { return m1; }
+    long GetM2() const { return m2; }    
+    double GetR() const { return r; }    
+    double GetQ() const { return q; }    
+    double GetLambda() const { return lambda; }    
+    int GetK() const { return k; }    
+    Vec<ZZ_pX> GetA() const { return A; }    
+    Vec<Vec<ZZ_pX> > GetA_prime() const { return A_prime; }
+    Vec<ZZ_pX> GetB() const { return B; }
+    ZZ_pX GetU() const { return u; }
     
 private:
     /* Global parameters */
@@ -134,9 +52,6 @@ private:
     int k;
     ZZ_pX f; // R = Z_p/f and R_0 = Z/f
     
-    /* Hierarchy parameters */
-//    int mu; // Hierarchy parameter
-    
     /* Master public key */
     Vec<ZZ_pX> A;
     Vec< Vec<ZZ_pX> > A_prime;
@@ -144,7 +59,10 @@ private:
     ZZ_pX u;
     
     /* Master secret key */
-    Vec< Vec<ZZX> > msk; // Master secret key of HIBE system
+    Vec< Vec<ZZX> > msk;
+    
+    /** Methods **/
+    int IdealTrapGen();    
     
     /* Auxiliary functions of IdealTrapGen algorithm */
     void Decomp(Vec< Vec<ZZX> >& _W, const Vec<ZZX>& _h);
@@ -166,8 +84,6 @@ private:
     void PrintMatrixZZ_pX(const string& name, const Vec< Vec<ZZ_pX> >& M);
     void PrintVectorZZ_pX(const string& name, const Vec<ZZ_pX>& M);
     
-    /* Main functions */
-    int IdealTrapGen();    
 };
 
 #endif	/* HIBE_H */

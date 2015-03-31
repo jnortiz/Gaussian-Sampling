@@ -7,14 +7,10 @@
 
 #include <cstdlib>
 #include <math.h>
-//#include <NTL/ZZ.h>
 #include "HIBE.h"
 
 using namespace std;
 
-/*
- * 
- */
 int main(int argc, char** argv) {
     double lambda;
     int q, m1, m2, k;
@@ -47,7 +43,7 @@ int main(int argc, char** argv) {
     }
     
     HIBE hibe((double)q, m1, m2, k);
-    hibe.Setup(10);
+    hibe.Setup(10); // Setup algorithm with h = 10
     
     return 0;
 }
