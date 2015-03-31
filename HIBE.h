@@ -5,6 +5,8 @@
  * Created on March 10, 2015, 4:12 PM
  */
 
+#include <NTL/ZZXFactoring.h>
+#include <NTL/ZZ_pXFactoring.h>
 #include <NTL/ZZ.h>
 #include <NTL/ZZ_pEX.h>
 
@@ -19,7 +21,9 @@ public:
     HIBE(double q, int m1, int m2, int k);
     HIBE(const HIBE& orig);
     virtual ~HIBE();    
-    void IdealTrapGen();
+    
+    /* Functions */
+    void Setup(int mu);    
     
     int GetM() const {
         return m;
@@ -119,6 +123,7 @@ public:
 
     
 private:
+    /* Global parameters */
     double q;
     double r;
     double lambda;
@@ -129,7 +134,16 @@ private:
     int k;
     ZZ_pX f; // R = Z_p/f and R_0 = Z/f
     
-    Vec<ZZ_pX> A; // Part of mpk
+    /* Hierarchy parameters */
+//    int mu; // Hierarchy parameter
+    
+    /* Master public key */
+    Vec<ZZ_pX> A;
+    Vec< Vec<ZZ_pX> > A_prime;
+    Vec<ZZ_pX> B;
+    ZZ_pX u;
+    
+    /* Master secret key */
     Vec< Vec<ZZX> > msk; // Master secret key of HIBE system
     
     /* Auxiliary functions of IdealTrapGen algorithm */
@@ -144,14 +158,16 @@ private:
     void Add(Vec<ZZX>& c, const Vec<ZZX>& a, const Vec<ZZX>& b);
     void Concat(Vec< Vec<ZZX> >& S, const Vec< Vec<ZZX> >& V, const Vec< Vec<ZZX> >& P, const Vec< Vec<ZZX> >& D, const Vec< Vec<ZZX> >&B);
     void Concat(Vec<ZZ_pX>& A, const Vec<ZZ_pX>& A1, const Vec<ZZ_pX>& A2);
+    int FinalVerification(const Vec<ZZ_pX>& A, const Vec< Vec<ZZX> >& S);
   
+    /* Auxiliary functions */
     void PrintMatrixZZX(const string& name, const Vec< Vec<ZZX> >& M);
     void PrintVectorZZX(const string& name, const Vec<ZZX>& M);
     void PrintMatrixZZ_pX(const string& name, const Vec< Vec<ZZ_pX> >& M);
     void PrintVectorZZ_pX(const string& name, const Vec<ZZ_pX>& M);
     
-    int FinalVerification(const Vec<ZZ_pX>& A, const Vec< Vec<ZZX> >& S);
-    
+    /* Main functions */
+    int IdealTrapGen();    
 };
 
 #endif	/* HIBE_H */

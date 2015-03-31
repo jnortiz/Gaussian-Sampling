@@ -48,7 +48,42 @@ HIBE::~HIBE() {
     // TODO
 }
 
-void HIBE::IdealTrapGen() {
+void HIBE::Setup(int mu) {
+    
+    /* The IdealTrapGen algorithm selects uniformly a random vector A and a short basis S = msk */
+    cout << "[*] IdealTrapGen status: ";
+    if(this->IdealTrapGen())
+        cout << "Pass!" << endl;
+    else
+        cout << "Error!" << endl;
+    
+    /* The A_prime matrix contains uniformly random vectors, one for each hierarchy level */
+    int i, j;
+    this->A_prime.SetLength(mu);
+    for(i = 0; i < A_prime.length(); i++) {
+        this->A_prime[i].SetLength(this->m);
+        for(j = 0; j < A_prime[0].length(); j++)
+            this->A_prime[i][j] = random_ZZ_pX(this->n);
+    }//end-for
+    
+    /* B is just a uniformly random vector of m elements */
+    this->B.SetLength(this->m);
+    for(i = 0; i < B.length(); i++)
+        this->B[i] = random_ZZ_pX(this->n);
+    
+    /* u is a uniformly random polynomial in R = Z_p[x]/f */
+    this->u = random_ZZ_pX(this->n);
+    
+    cout << "/** Master public key (A, A_prime, B, u) **/" << endl;
+    this->PrintVectorZZ_pX("Vector A", this->A);
+    this->PrintMatrixZZ_pX("Matrix A_prime", this->A_prime);
+    this->PrintVectorZZ_pX("Vector B", this->B);
+    cout << "\n/** Polynomial u **/\n" << this->u << endl;    
+    this->PrintMatrixZZX("Master Secret Key (msk)", this->msk);
+    
+}
+
+int HIBE::IdealTrapGen() {
     
     Vec< Vec<ZZX> > T; // Matrix T_{lambda} -- it has elements in {-2, 1, 0}
     Vec< Vec<ZZX> > S;  // It will be the master secret key of HIBE system
@@ -182,7 +217,7 @@ void HIBE::IdealTrapGen() {
         }//end-if        
     }//end-for
     
-    /* Post-processing. If iStar is different of 1 (paper notation), we need to swap columns 1 and iStar */    
+    /* Post-processing. If iStar is different of 1 (paper notation), we must swap columns 1 and iStar */    
     if(iStar != 0) {
         for(i = 0; i < H[0].length(); i++) {
             aux_swap = H[i][iStar];
@@ -345,17 +380,14 @@ void HIBE::IdealTrapGen() {
     this->Concat(S, V, P, D, B);    
     this->Concat(A, A1, A2);
     
-    this->PrintVectorZZ_pX("Vector A", A);
-    this->PrintMatrixZZX("Master Secret Key (msk)", S);
-    
     if(this->FinalVerification(A, S)) {
-        cout << "\nPass! S*A = 0." << endl;
         this->SetA(A);
         this->SetMsk(S);
+        return 1;
     } else
-        cout << "\nError! S*A != 0." << endl;
+        return 0;
     
-}
+}//end-IdealTrapGen()
 
 // Binary decomposition of each row of H'.
 void HIBE::Decomp(Vec< Vec<ZZX> >& _W, const Vec<ZZX>& _h) {

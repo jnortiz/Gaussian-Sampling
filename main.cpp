@@ -7,8 +7,7 @@
 
 #include <cstdlib>
 #include <math.h>
-#include <NTL/ZZ.h>
-
+//#include <NTL/ZZ.h>
 #include "HIBE.h"
 
 using namespace std;
@@ -17,8 +16,8 @@ using namespace std;
  * 
  */
 int main(int argc, char** argv) {
-    double lambda, q;
-    int m1, m2, k;
+    double lambda;
+    int q, m1, m2, k;
     
     q = 43; //q must be prime and congruent to 3 mod 8
     m1 = 7;
@@ -27,7 +26,7 @@ int main(int argc, char** argv) {
 
     lambda = ceil(1 + (log(q)/log(2)));
     
-    if((int)(q) % 8 != 3) {
+    if(q % 8 != 3) {
         cout << "q must be congruent to 3 mod 8.\n";
         return -1;
     }
@@ -47,8 +46,8 @@ int main(int argc, char** argv) {
         return -1;
     }
     
-    HIBE hibe(q, m1, m2, k);
-    hibe.IdealTrapGen();
+    HIBE hibe((double)q, m1, m2, k);
+    hibe.Setup(10);
     
     return 0;
 }
