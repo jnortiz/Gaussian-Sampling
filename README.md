@@ -4,7 +4,7 @@
 <br> Laboratory of Security and Applied Cryptography (LASCA) </br>
 
 <br><b> Project name: PKE-PEKS</b> </br>
-<br> Authors: Jheyne N. Ortiz </br>
+<br> Author: Jheyne N. Ortiz </br>
 <br> Advisor: Ricardo Dahab </br>
 <br> Co-advisor: Diego F. Aranha </br>
 <br> Brief description: Software implementation of the PKE-PEKS scheme proposed by (Chen and Lin, 2014) in C++ language using NTL. </br>
