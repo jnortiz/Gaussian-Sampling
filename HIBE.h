@@ -18,7 +18,7 @@ using namespace NTL;
 
 class HIBE {
 public:
-    HIBE(double q, int m1, int m2, int k);
+    HIBE(double q, int m1, int m2, int k, int sigma);
     HIBE(const HIBE& orig);
     virtual ~HIBE();    
     
@@ -44,6 +44,7 @@ private:
     /* Global parameters */
     double q;
     double r;
+    int sigma;
     double lambda;
     long m;
     long n;

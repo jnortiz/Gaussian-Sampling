@@ -19,7 +19,7 @@
 using namespace std;
 using namespace NTL;
 
-HIBE::HIBE(double q, int m1, int m2, int k) {
+HIBE::HIBE(double q, int m1, int m2, int k, int sigma) {
         
     this->lambda = ceil(1 + (log(q)/log(2)));    
     this->m = m1 + m2;
@@ -29,6 +29,7 @@ HIBE::HIBE(double q, int m1, int m2, int k) {
     this->m2 = m2;
     this->k = k;    
     this->r = ceil((double)(1 + (log(q)/log(3))));
+    this->sigma = sigma;
     
     ZZ_p::init(conv<ZZ>(q)); // Coefficients modulo
 
@@ -74,14 +75,17 @@ void HIBE::Setup(int h) {
     /* u is a uniformly random polynomial in R = Z_p[x]/f */
     this->u = random_ZZ_pX(this->n);
     
-    cout << "/** Master public key (A, A_prime, B, u) **/" << endl;
-    this->PrintVectorZZ_pX("Vector A", this->A);
-    this->PrintMatrixZZ_pX("Matrix A_prime", this->A_prime);
-    this->PrintVectorZZ_pX("Vector B", this->B);
-    cout << "\n/** Polynomial u **/\n" << this->u << endl;    
-    this->PrintMatrixZZX("Master Secret Key (msk)", this->msk);
+    /* Uncomment the following lines if you want a preview of master keys */
+//    cout << "/** Master public key (A, A_prime, B, u) **/" << endl;
+//    this->PrintVectorZZ_pX("Vector A", this->A);
+//    this->PrintMatrixZZ_pX("Matrix A_prime", this->A_prime);
+//    this->PrintVectorZZ_pX("Vector B", this->B);
+//    cout << "\n/** Polynomial u **/\n" << this->u << endl;    
+//    this->PrintMatrixZZX("Master Secret Key (msk)", this->msk);
     
-}
+    cout << "[*] Setup status: Pass!";
+    
+}//end-Setup()
 
 int HIBE::IdealTrapGen() {
     
@@ -435,14 +439,14 @@ void HIBE::Mult(Vec<ZZX>& c, const ZZ_pX& a, const Vec<ZZX>& b) {
     for(int i = 0; i < b.length(); i++)
         mul(c[i], conv<ZZX>(a), b[i]);
 
-}
+}//end-Mult()
 
 void HIBE::Mult(Vec<ZZX>& c, const ZZX& a, const Vec<ZZX>& b) {
 
     for(int i = 0; i < b.length(); i++)
         c[i] = a*b[i];    
     
-}
+}//end-Mult()
 
 void HIBE::Mult(Vec< Vec<ZZX> >& c, const Vec< Vec<ZZX> >& a, const Vec< Vec<ZZX> >& b) {       
     
@@ -459,8 +463,9 @@ void HIBE::Mult(Vec< Vec<ZZX> >& c, const Vec< Vec<ZZX> >& a, const Vec< Vec<ZZX
                 column[h] = b[h][j];
             Mult(c[i][j], a[i], column);//[*]  
         }//end-for
-    }
-}
+    }//end-for
+    
+}//end-Mult()
 
 void HIBE::Mult(ZZX& c, const Vec<ZZX>& a, const Vec<ZZX>& b) {
     
@@ -474,7 +479,7 @@ void HIBE::Mult(ZZX& c, const Vec<ZZX>& a, const Vec<ZZX>& b) {
         add(c, c, out);
     }//end-for
                               
-}//end-for
+}//end-Mult()
 
 void HIBE::Mult(Vec<ZZ_pX>& c /*A2*/, const Vec< Vec<ZZX> >& a /*-U*/, const Vec<ZZ_pX>& b/*A1*/) {
     
@@ -483,7 +488,7 @@ void HIBE::Mult(Vec<ZZ_pX>& c /*A2*/, const Vec< Vec<ZZX> >& a /*-U*/, const Vec
     for(int i = 0; i < a.length(); i++)
         this->Mult(c[i], a[i], b);//[1]
     
-}
+}//end-Mult()
 
 void HIBE::Mult(ZZ_pX& c, const Vec<ZZX>& a, const Vec<ZZ_pX>& b) {
     
@@ -497,14 +502,14 @@ void HIBE::Mult(ZZ_pX& c, const Vec<ZZX>& a, const Vec<ZZ_pX>& b) {
         add(c, c, out);
     }//end-for
                               
-}
+}//end-Mult()
 
 void HIBE::Add(Vec<ZZX>& c, const Vec<ZZX>& a, const Vec<ZZX>& b) {
     
     for(int i = 0; i < c.length(); i++)
         c[i] = a[i] + b[i];
     
-}
+}//end-Add()
 
 void HIBE::Concat(Vec< Vec<ZZX> >& S, const Vec< Vec<ZZX> >& V, const Vec< Vec<ZZX> >& P, const Vec< Vec<ZZX> >& D, const Vec< Vec<ZZX> >&B) {
     
@@ -535,7 +540,7 @@ void HIBE::Concat(Vec< Vec<ZZX> >& S, const Vec< Vec<ZZX> >& V, const Vec< Vec<Z
         for(j = 0, jS = D[0].length(); j < B[0].length(), jS < S[0].length(); j++, jS++)
             S[iS][jS] = B[i][j];
     
-}
+}//end-Concat()
 
 void HIBE::Concat(Vec<ZZ_pX>& A, const Vec<ZZ_pX>& A1, const Vec<ZZ_pX>& A2) {
     
@@ -549,7 +554,7 @@ void HIBE::Concat(Vec<ZZ_pX>& A, const Vec<ZZ_pX>& A1, const Vec<ZZ_pX>& A2) {
     for(i = 0, iA = A1.length(); i < A2.length() && iA < A.length(); i++, iA++)
         A[iA] = A2[i];
     
-}
+}//end-Concat()
 
 void HIBE::PrintMatrixZZX(const string& name, const Vec< Vec<ZZX> >& M) {
     
@@ -558,9 +563,9 @@ void HIBE::PrintMatrixZZX(const string& name, const Vec< Vec<ZZX> >& M) {
         for(int j = 0; j < M[0].length(); j++)
             cout << M[i][j] << " ";
         cout << endl;
-    }
+    }//end-for
     
-}
+}//end-PrintMatrixZZX()
 
 void HIBE::PrintVectorZZX(const string& name, const Vec<ZZX>& V) {
     
@@ -569,7 +574,7 @@ void HIBE::PrintVectorZZX(const string& name, const Vec<ZZX>& V) {
         cout << V[i] << " ";
     cout << endl;
     
-}
+}//end-PrintVectorZZX()
 
 void HIBE::PrintMatrixZZ_pX(const string& name, const Vec< Vec<ZZ_pX> >& M) {
     
@@ -578,9 +583,9 @@ void HIBE::PrintMatrixZZ_pX(const string& name, const Vec< Vec<ZZ_pX> >& M) {
         for(int j = 0; j < M[0].length(); j++)
             cout << M[i][j] << " ";
         cout << endl;
-    }    
+    }//end-for
     
-}
+}//end-PrintMatrixZZ_pX()
 
 void HIBE::PrintVectorZZ_pX(const string& name, const Vec<ZZ_pX>& V) {
     
@@ -589,7 +594,7 @@ void HIBE::PrintVectorZZ_pX(const string& name, const Vec<ZZ_pX>& V) {
         cout << V[i] << " ";
     cout << endl;
     
-}
+}//end-PrintVectorZZ_pX()
 
 int HIBE::FinalVerification(const Vec<ZZ_pX>& A, const Vec< Vec<ZZX> >& S) {
 
@@ -608,4 +613,4 @@ int HIBE::FinalVerification(const Vec<ZZ_pX>& A, const Vec< Vec<ZZX> >& S) {
     
     return 0;
     
-}
+}//end-FinalVerification()
