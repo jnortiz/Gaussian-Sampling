@@ -1,6 +1,5 @@
 # PKE-PEKS
-<br> University of Campinas </br>
-<br> Institute of Computing </br>
+<br> University of Campinas | Institute of Computing </br>
 <br> Laboratory of Security and Applied Cryptography (LASCA) </br>
 
 <br> Author: Jheyne N. Ortiz </br>
