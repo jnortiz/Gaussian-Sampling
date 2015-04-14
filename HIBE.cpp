@@ -92,7 +92,6 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
         this->DZCreatePartition(m, sigma, n);
     
     powerOmega = power2_ZZ(to_int(omega)); // 2^{\omega}
-    yPrime = RandomBnd(powerOmega - 1);
     mInt = to_int(m);
     sigma_ZZ = to_ZZ(sigma);
     
@@ -111,13 +110,14 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
                     return s*x;
             }//end-if
             else {
+                yPrime = RandomBnd(powerOmega - 1);                
                 yBar = yPrime * (this->Y_ZZ[i-1] - this->Y_ZZ[i]);
                 
-                if(this->X_ZZ[i] + 1 <= sigma_ZZ)
+                if(this->X_ZZ[i] + 1 <= sigma_ZZ) // In concave-down case
                     if(yBar <= powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1],this->Y_ZZ[i], x, i))
                         return s*x;
                 else
-                    if(sigma_ZZ <= this->X_ZZ[i-1])
+                    if(sigma_ZZ <= this->X_ZZ[i-1]) // In concave-up case
                         if(yBar < powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1], this->Y_ZZ[i], (x-1), i))
                             return s*x;
                     else
