@@ -9,6 +9,7 @@
 #include <NTL/ZZ_pXFactoring.h>
 #include <NTL/ZZ.h>
 #include <NTL/ZZ_pEX.h>
+#include <NTL/RR.h>
 
 #ifndef HIBE_H
 #define	HIBE_H
@@ -23,7 +24,9 @@ public:
     virtual ~HIBE();    
     
     /* Functions */
-    void Setup(int h);    
+    void Setup(int h);
+//    void KeyDerive();
+    ZZ ZiggutatO(RR m, RR sigma, ZZ omega, RR n);
     
     /* Getters */
     long GetM() { return m; }    
@@ -62,8 +65,14 @@ private:
     /* Master secret key */
     Vec< Vec<ZZX> > msk;
     
+    /* Ziggurat variables */
+    Vec<RR> X;
+    Vec<RR> Y;
+    Vec<ZZ> X_ZZ;
+    Vec<ZZ> Y_ZZ;
+    
     /** Methods **/
-    int IdealTrapGen();    
+    int IdealTrapGen();   
     
     /* Auxiliary functions of IdealTrapGen algorithm */
     void Decomp(Vec< Vec<ZZX> >& _W, const Vec<ZZX>& _h);
@@ -79,6 +88,12 @@ private:
     void Concat(Vec<ZZ_pX>& A, const Vec<ZZ_pX>& A1, const Vec<ZZ_pX>& A2);
     int FinalVerification(const Vec<ZZ_pX>& A, const Vec< Vec<ZZX> >& S);
   
+    /* Auxiliary functions of Ziggurat algorithm */
+    void DZCreatePartition(RR m, RR sigma, RR n);
+    RR DZRecursion(RR m, RR c, RR sigma);
+    RR Rho(RR sigma, RR x);
+    ZZ sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i);
+    
     /* Auxiliary functions */
     void PrintMatrixZZX(const string& name, const Vec< Vec<ZZX> >& M);
     void PrintVectorZZX(const string& name, const Vec<ZZX>& M);

@@ -15,6 +15,8 @@
 #include <NTL/ZZ_pEX.h>
 #include <NTL/matrix.h>
 #include <NTL/mat_ZZ.h>
+#include <NTL/RR.h>
+#include <cstring>
 
 using namespace std;
 using namespace NTL;
@@ -39,7 +41,7 @@ HIBE::HIBE(double q, int m1, int m2, int k, int sigma) {
     SetCoeff(f, this->n, 1);
     this->f = f;
     ZZ_pE::init(f); // Ring elements modulo
-        
+    
 }
 
 HIBE::HIBE(const HIBE& orig) {
@@ -48,6 +50,201 @@ HIBE::HIBE(const HIBE& orig) {
 HIBE::~HIBE() {
     // TODO
 }
+
+RR HIBE::Rho(RR sigma, RR x) {
+    
+    if(x == 0)
+        return to_RR(1);
+    
+    return exp(-(power(x/sigma, 2))/2.0);
+    
+}//end-Rho()
+
+ZZ HIBE::sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i) {
+    
+    // Consider x0 = x_{i-1}, x1 =s x_i, y0 = \bar{y}_{i-1} and y1 = \bar{y}_i
+    if(x1 == x0)
+        return to_ZZ(-1);
+    
+    ZZ y0Hat, y1Hat;    
+    y0Hat = 0; // Just in case i is neither greater than 1 nor equal to 1
+    y1Hat = to_int(y1);
+    
+    if(i > 1)
+        y0Hat = y0;
+    if(i == 1)
+        y0Hat = to_ZZ(1);
+    
+    return (y1Hat - y0Hat)/(x1 - x0)*(x - x1);
+    
+}//end-sLine()
+
+ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
+    
+    /* Output precision setup */
+    long bitPrecision;
+    bitPrecision = to_long(n);
+    RR::SetOutputPrecision(bitPrecision);
+    
+    ZZ sigma_ZZ, s, x, powerOmega, yPrime, yBar;
+    long int i, mInt;
+    
+    // Creating the rectangles partitioning if it was not done before
+    if(this->X.length() != to_long(m) + 1)
+        this->DZCreatePartition(m, sigma, n);
+    
+    powerOmega = power2_ZZ(to_int(omega)); // 2^{\omega}
+    mInt = to_int(m);
+    sigma_ZZ = to_ZZ(sigma);
+    
+    while(true) {        
+        i = RandomBnd(mInt); // Sample a random value in {1, ..., m}, e.g. select a rectangle
+        s = 1 - 2 * RandomBnd(3); // Sample a random signal s
+        x = RandomBnd(to_ZZ(this->X[i])); // Sample a x value between 0 and floor(x_i)
+        
+        if(x > to_ZZ(0) && x <= this->X_ZZ[i-1]) // The sampled x is in the left side of the i-th rectangle
+            return s*x;
+        else
+            if(x == to_ZZ(0)) {
+                ZZ b;
+                b = RandomBnd(1); // It selects between 0 or 1
+                if(b == to_ZZ(0))
+                    return s*x;
+            }//end-if
+            else {
+                yPrime = RandomBnd(powerOmega - 1);
+                yBar = yPrime * (this->Y_ZZ[i-1] - this->Y_ZZ[i]);
+                
+                if(this->X_ZZ[i] + 1 <= sigma_ZZ)
+                    if(yBar <= powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1],this->Y_ZZ[i], x, i))
+                        return s*x;
+                else
+                    if(sigma_ZZ <= this->X_ZZ[i-1])
+                        if(yBar < powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1], this->Y_ZZ[i], (x-1), i))
+                            return s*x;
+                    else
+                        if(yBar <= to_ZZ(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i])))
+                           return s*x; 
+            }//end-else
+    }//end-while
+    
+}//end-ZigguratO()
+
+void HIBE::DZCreatePartition(RR m, RR sigma, RR n) {
+    /*
+     * Parameters description:
+     * m: number of rectangles
+     * sigma: Gaussian distribution parameter
+     * n: bit precision
+     */
+    long bitPrecision;
+    bitPrecision = to_long(n);
+            
+    // The approximation error must be less than 2^{-n}
+    RR statDistance = power2_RR(-bitPrecision);
+    
+    RR c, tailcut, y0;
+    long nRect = to_long(m);
+    bool validPartition = 0; // This tag denotes when a valid partition is found    
+    
+    this->X.SetLength(nRect + 1);
+    this->Y.SetLength(nRect + 1);
+    
+        
+    tailcut = to_RR(13) * sigma; // We assume that tailcut = 13
+    
+    while(tailcut < to_RR(14)*sigma) {
+        
+        c = to_RR(1);        
+        y0 = to_RR(0);
+        this->X[nRect] = tailcut;        
+        
+        while(y0 < 1 || abs(y0)-1 > statDistance) {
+            
+            y0 = DZRecursion(m, c, sigma);
+            
+            if(y0 == -1) // Error in "inv" calculus
+                break;
+            
+            if(y0 >= 1) { // The found partitioning is valid
+                validPartition = 1;
+                break;
+            }//end-if
+            
+            c++; // If no partitioning is found, repeat the process with incremented constant
+            
+        }//end-while
+        
+        if(validPartition) // We return the first valid partition found
+            break;
+        
+        if(y0 < 1 && abs(y0)-1 > statDistance)
+            tailcut++;
+        else
+            break; // If y0 >= 1, then a good partitioning was found and it is finished
+        
+    }//end-while
+    
+    if(validPartition) {
+        cout << "[*] DZCreatePartition status: Pass!" << endl;
+        
+        this->X_ZZ.SetLength(this->X.length());
+        this->Y_ZZ.SetLength(this->Y.length());
+
+        long int i;
+        // Computing the floor and ZZ format of values in X and Y vectors
+        for(i = 0; i < this->X_ZZ.length(); i++) { // X and Y vectors have the same length m
+            this->X_ZZ[i] = to_ZZ(this->X[i]);
+            this->Y_ZZ[i] = to_ZZ(this->Y[i]);
+        }//end-for
+                
+        cout << "Final distance: " << y0 << endl;
+    }
+    else // No valid partition was found
+        cout << "[*] DZCreatePartition status: Error!" << endl;
+        
+    
+}//end-DZCreatePartition()
+
+RR HIBE::DZRecursion(RR m, RR c, RR sigma) {    
+    
+    RR inv, minus2, overM, over2, S;
+    int nRect;
+    
+    nRect = to_int(m);
+    minus2 = to_RR(-2);
+    overM = to_RR(1)/m;
+    over2 = to_RR(1)/to_RR(2);
+    
+    if(inv < to_RR(0))
+        return to_RR(-1);
+    
+    // "Size" of each rectangle
+    S = sigma * overM * sqrt(ComputePi_RR() * over2) * to_RR(c);
+    
+//    X[nRect] = to_RR(13*sigma);
+    this->Y[nRect] = Rho(sigma, this->X[nRect]);
+    
+    inv = minus2 * log(S/to_RR(TruncToZZ(this->X[nRect]) + to_ZZ(1)));
+    
+    this->X[nRect-1] = sigma * sqrt(inv);
+    this->Y[nRect-1] = Rho(sigma, this->X[nRect-1]);
+    
+    for(int i = nRect-2; i > 0; i--) {
+        inv = minus2 * log(S/to_RR(TruncToZZ(this->X[i+1]) + to_ZZ(1))) + Rho(sigma, this->X[i]);
+        
+        if(inv < to_RR(0))
+            return to_RR(-1);
+        
+        this->X[i] = sigma * sqrt(inv); // Rho(sigma, x_i) = y_i
+        this->Y[i] = exp(-over2 * power(this->X[i]/sigma, 2)); // Rho^{-1}(sigma, Rho(sigma, x_i)) = x_i               
+    }//end-for
+    
+    this->Y[0] = (S/(to_RR(1) + this->X[1])) + Rho(sigma, this->X[1]);
+        
+    return this->Y[0];
+    
+}//end-DZCreatePartition()
 
 void HIBE::Setup(int h) {
     
@@ -83,7 +280,7 @@ void HIBE::Setup(int h) {
 //    cout << "\n/** Polynomial u **/\n" << this->u << endl;    
 //    this->PrintMatrixZZX("Master Secret Key (msk)", this->msk);
     
-    cout << "[*] Setup status: Pass!";
+    cout << "[*] Setup status: Pass!" << endl;
     
 }//end-Setup()
 
@@ -311,7 +508,7 @@ int HIBE::IdealTrapGen() {
         
     }//end-for
     
-    // The remaining is filled with zero polynomials
+    // The remaining is fill_Wed with zero polynomials
     for(i = this->m1*this->lambda; i < this->m2; i++)
         for(j = 0; j < this->m1; j++)
             for(int k = 0; k < this->n; k++) {

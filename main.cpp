@@ -51,7 +51,35 @@ int main(int argc, char** argv) {
     }
     
     HIBE hibe((double)q, m1, m2, k, sigma);
-    hibe.Setup(10); // Setup algorithm with h = 10
+//    hibe.Setup(10); // Setup algorithm with h = 10
+    
+    RR m, sigmaRR, n;
+    ZZ omega;
+    m = to_RR(63);
+    sigmaRR = to_RR(32);
+    n = to_RR(106);
+    omega = 106;
+    
+    int nPositive = 0, nNegative = 0, nZero = 0;
+    ZZ sample;
+    
+    // Following the reference implementation, omega = bit precision (n)
+    // Getting samples from the distribution
+    cout << "[*] Ziggurat sampling" << endl;
+    
+    for(int i = 0; i < 1000000; i++) {
+        sample = hibe.ZiggutatO(m, sigmaRR, omega, n);
+        if(sample > 0)
+            nPositive++;
+        else if(sample < 0)
+            nNegative++;
+        else
+            nZero++;
+    }//end-for
+    
+    cout << "\nPositive numbers: " << nPositive << endl;
+    cout << "Negative numbers: " << nNegative << endl;
+    cout << "Zero numbers: " << nZero << endl;
     
     return 0;
 }
