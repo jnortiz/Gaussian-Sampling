@@ -63,10 +63,9 @@ int main(int argc, char** argv) {
     int nPositive = 0, nNegative = 0, nZero = 0;
     ZZ sample;
     
-    // Following the reference implementation, omega = bit precision (n)
-    // Getting samples from the distribution
+    // Following the reference implementation, omega = bit precision (n)    
+    // Getting samples from the distribution    
     cout << "[*] Ziggurat sampling" << endl;
-    
     for(int i = 0; i < 1000000; i++) {
         sample = hibe.ZiggutatO(m, sigmaRR, omega, n);
         if(sample > 0)

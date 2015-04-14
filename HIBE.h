@@ -20,12 +20,15 @@ using namespace NTL;
 class HIBE {
 public:
     HIBE(double q, int m1, int m2, int k, int sigma);
-    HIBE(const HIBE& orig);
     virtual ~HIBE();    
     
-    /* Functions */
+    /* HIBE algorithms */
     void Setup(int h);
 //    void KeyDerive();
+//    void Encrypt();
+//    void Decrypt();
+    
+    /* Sampling from a discrete Gaussian distribution over the integers */
     ZZ ZiggutatO(RR m, RR sigma, ZZ omega, RR n);
     
     /* Getters */
@@ -71,7 +74,6 @@ private:
     Vec<ZZ> X_ZZ;
     Vec<ZZ> Y_ZZ;
     
-    /** Methods **/
     int IdealTrapGen();   
     
     /* Auxiliary functions of IdealTrapGen algorithm */

@@ -44,13 +44,9 @@ HIBE::HIBE(double q, int m1, int m2, int k, int sigma) {
     
 }
 
-HIBE::HIBE(const HIBE& orig) {
-}
+HIBE::~HIBE() {};
 
-HIBE::~HIBE() {
-    // TODO
-}
-
+// The most expensive function in Ziggurat algorithm
 RR HIBE::Rho(RR sigma, RR x) {
     
     if(x == 0)
@@ -60,6 +56,7 @@ RR HIBE::Rho(RR sigma, RR x) {
     
 }//end-Rho()
 
+// Function used in ZigguratO algorithm to decide if x is up or down to the curve (Rho function)
 ZZ HIBE::sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i) {
     
     // Consider x0 = x_{i-1}, x1 =s x_i, y0 = \bar{y}_{i-1} and y1 = \bar{y}_i
@@ -79,6 +76,7 @@ ZZ HIBE::sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i) {
     
 }//end-sLine()
 
+// Sampling algorithm with optimization to avoid Rho function computation
 ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
     
     /* Output precision setup */
@@ -98,16 +96,16 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
     sigma_ZZ = to_ZZ(sigma);
     
     while(true) {        
-        i = RandomBnd(mInt); // Sample a random value in {1, ..., m}, e.g. select a rectangle
+        i = RandomBnd(mInt) + 1; // Sample a random value in {0, ..., m-1} bad add one to the result, e.g. select a rectangle in {1, ..., m}
         s = 1 - 2 * RandomBits_long(1); // Sample a random signal s
-        x = RandomBnd(this->X_ZZ[i]); // Sample a x value between 0 and floor(x_i)
+        x = RandomBnd(this->X_ZZ[i] + 1); // Sample a x value between 0 and floor(x_i)
         
         if(x > to_ZZ(0) && x <= this->X_ZZ[i-1]) // The sampled x is in the left side of the i-th rectangle
             return s*x;
         else
             if(x == to_ZZ(0)) {
                 ZZ b;
-                b = RandomBnd(1); // It selects between 0 or 1
+                b = RandomBits_long(1); // It selects between 0 or 1
                 if(b == to_ZZ(0))
                     return s*x;
             }//end-if
@@ -130,6 +128,7 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
     
 }//end-ZigguratO()
 
+// DZCreatePartition defines the x and y axes of rectangles in the Gaussian distribution
 void HIBE::DZCreatePartition(RR m, RR sigma, RR n) {
     /*
      * Parameters description:
@@ -145,7 +144,7 @@ void HIBE::DZCreatePartition(RR m, RR sigma, RR n) {
     
     RR c, tailcut, y0;
     long nRect = to_long(m);
-    bool validPartition = 0; // This tag denotes when a valid partition is found    
+    bool validPartition = 0;
     
     this->X.SetLength(nRect + 1);
     this->Y.SetLength(nRect + 1);
@@ -181,7 +180,7 @@ void HIBE::DZCreatePartition(RR m, RR sigma, RR n) {
         if(y0 < 1 && abs(y0)-1 > statDistance)
             tailcut++;
         else
-            break; // If y0 >= 1, then a good partitioning was found and it is finished
+            break;
         
     }//end-while
     
@@ -206,7 +205,8 @@ void HIBE::DZCreatePartition(RR m, RR sigma, RR n) {
     
 }//end-DZCreatePartition()
 
-RR HIBE::DZRecursion(RR m, RR c, RR sigma) {    
+// Used in DZCreatePartition to define the distance y0
+RR HIBE::DZRecursion(RR m, RR c, RR sigma) {
     
     RR inv, minus2, overM, over2, S;
     int nRect;
@@ -222,7 +222,11 @@ RR HIBE::DZRecursion(RR m, RR c, RR sigma) {
     // "Size" of each rectangle
     S = sigma * overM * sqrt(ComputePi_RR() * over2) * to_RR(c);
     
-//    X[nRect] = to_RR(13*sigma);
+    /* 
+     * In the reference code, this statement is always executed. Although, it overwrites the 
+     * "this->X[nRect] = tailcut;" statement in DZCreatePartition function.
+     */
+    //    X[nRect] = to_RR(13*sigma);
     this->Y[nRect] = Rho(sigma, this->X[nRect]);
     
     inv = minus2 * log(S/to_RR(TruncToZZ(this->X[nRect]) + to_ZZ(1)));
