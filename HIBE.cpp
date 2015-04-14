@@ -99,8 +99,8 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
     
     while(true) {        
         i = RandomBnd(mInt); // Sample a random value in {1, ..., m}, e.g. select a rectangle
-        s = 1 - 2 * RandomBnd(3); // Sample a random signal s
-        x = RandomBnd(to_ZZ(this->X[i])); // Sample a x value between 0 and floor(x_i)
+        s = 1 - 2 * RandomBits_long(1); // Sample a random signal s
+        x = RandomBnd(this->X_ZZ[i]); // Sample a x value between 0 and floor(x_i)
         
         if(x > to_ZZ(0) && x <= this->X_ZZ[i-1]) // The sampled x is in the left side of the i-th rectangle
             return s*x;
