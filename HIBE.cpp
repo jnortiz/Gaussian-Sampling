@@ -96,7 +96,7 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
     sigma_ZZ = to_ZZ(sigma);
     
     while(true) {        
-        i = RandomBnd(mInt) + 1; // Sample a random value in {0, ..., m-1} bad add one to the result, e.g. select a rectangle in {1, ..., m}
+        i = RandomBnd(mInt) + 1; // Sample a random value in {0, ..., m-1} and add one to the result, e.g. select a rectangle in {1, ..., m}
         s = 1 - 2 * RandomBits_long(1); // Sample a random signal s
         x = RandomBnd(this->X_ZZ[i] + 1); // Sample a x value between 0 and floor(x_i)
         
