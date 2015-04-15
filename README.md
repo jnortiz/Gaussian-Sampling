@@ -15,7 +15,7 @@ This implementation is intended to have three C++ classes: HIBE, OT, and PKE-PEK
 </p>
 
 <p>
-So far, we are considering only the HIBE class, which has four main algorithms: SetUp, KeyDerive, Encrypt, and Decrypt. The SetUp algorithm is already able to generate the system master keys, e.g. two basis for an orthogonal lattice and it uses the IdealTrapGen algorithm (Stehlé et al., 2009).
+So far, we are considering only the HIBE class, which has four main algorithms: SetUp, KeyDerive, Encrypt, and Decrypt. The SetUp algorithm is already able to generate the system master keys, e.g. two basis for an orthogonal lattice, and it uses the IdealTrapGen algorithm (Stehlé et al., 2009).
 </p>
 
 <p>
