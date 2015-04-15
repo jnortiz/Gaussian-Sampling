@@ -11,11 +11,11 @@ Advisors: Ricardo Dahab and Diego F. Aranha <br/>
 </p>
 
 <p>
-This implementation is intended to have three C++ classes: HIBE, OT and PKE-PEKS. Different from Chen and Lin, we replace the HIBE system of Agrawal et al. by the HIBE construction of (Mochetti and Dahab, 2014) using ideal lattices in order to reduce the public key size.
+This implementation is intended to have three C++ classes: HIBE, OT, and PKE-PEKS. Different from Chen and Lin, we replace the HIBE system of Agrawal et al. by the HIBE construction of (Mochetti and Dahab, 2014) using ideal lattices in order to reduce the public key size.
 </p>
 
 <p>
-So far, we are considering only the HIBE class, which has four main algorithms: SetUp, KeyDerive, Encrypt and Decrypt. The SetUp algorithm is already able to generate the system master keys, e.g. two basis for an orthogonal lattice and it uses the IdealTrapGen algorithm (Stehlé et al., 2009).
+So far, we are considering only the HIBE class, which has four main algorithms: SetUp, KeyDerive, Encrypt, and Decrypt. The SetUp algorithm is already able to generate the system master keys, e.g. two basis for an orthogonal lattice and it uses the IdealTrapGen algorithm (Stehlé et al., 2009).
 </p>
 
 <p>
