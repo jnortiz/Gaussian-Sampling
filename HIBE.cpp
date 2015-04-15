@@ -114,11 +114,11 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
                 yBar = yPrime * (this->Y_ZZ[i-1] - this->Y_ZZ[i]);
                 
                 if(this->X_ZZ[i] + 1 <= sigma_ZZ) // In concave-down case
-                    if(yBar <= powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1],this->Y_ZZ[i], x, i))
+                    if(yBar <= powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1],this->Y_ZZ[i], x, i) || yBar <= (powerOmega * to_ZZ(Rho(sigma, to_RR(x)) - Y[i])))
                         return s*x;
                 else
                     if(sigma_ZZ <= this->X_ZZ[i-1]) // In concave-up case
-                        if(yBar < powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1], this->Y_ZZ[i], (x-1), i))
+                        if(yBar < powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1], this->Y_ZZ[i], (x-1), i) && yBar < (powerOmega * to_ZZ(Rho(sigma, to_RR(x)) - Y[i])))
                             return s*x;
                     else
                         if(yBar <= to_ZZ(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i])))
