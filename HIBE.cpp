@@ -84,7 +84,7 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
     bitPrecision = to_long(n);
     RR::SetOutputPrecision(bitPrecision);
     
-    ZZ sigma_ZZ, s, x, powerOmega, yPrime, yBar;
+    ZZ sigma_ZZ, s, sample, x, powerOmega, yPrime, yBar;
     long int i, mInt;
     
     // Creating the rectangles partitioning if it was not done before
@@ -94,20 +94,26 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
     powerOmega = power2_ZZ(to_int(omega)); // 2^{\omega}
     mInt = to_int(m);
     sigma_ZZ = to_ZZ(sigma);
+    int nIterations = 0;
+    unsigned bit = 0;
     
-    while(true) {        
+    while(!bit) {        
         i = RandomBnd(mInt) + 1; // Sample a random value in {0, ..., m-1} and add one to the result, e.g. select a rectangle in {1, ..., m}
         s = 1 - 2 * RandomBits_long(1); // Sample a random signal s
         x = RandomBnd(this->X_ZZ[i] + 1); // Sample a x value between 0 and floor(x_i)
         
-        if(x > to_ZZ(0) && x <= this->X_ZZ[i-1]) // The sampled x is in the left side of the i-th rectangle
-            return s*x;
+        if((x > to_ZZ(0) && x <= this->X_ZZ[i-1]) && !bit) { // The sampled x is in the left side of the i-th rectangle
+            sample = s*x;
+            bit = 1;
+        }//end-if
         else
             if(x == to_ZZ(0)) {
                 ZZ b;
                 b = RandomBits_long(1); // It selects between 0 or 1
-                if(b == to_ZZ(0))
-                    return s*x;
+                if(b == to_ZZ(0) && !bit) {
+                    sample = s*x;
+                    bit = 1;
+                }//end-if
             }//end-if
             else {
                 yPrime = RandomBnd(powerOmega - 1);                
@@ -115,16 +121,27 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
                 
                 if(this->X_ZZ[i] + 1 <= sigma_ZZ) // In concave-down case
                     if(yBar <= powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1],this->Y_ZZ[i], x, i) || yBar <= (powerOmega * to_ZZ(Rho(sigma, to_RR(x)) - Y[i])))
-                        return s*x;
+                        if(!bit) {
+                            sample = s*x;
+                            bit = 1;
+                        }//end-if
                 else
                     if(sigma_ZZ <= this->X_ZZ[i-1]) // In concave-up case
                         if(yBar < powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1], this->Y_ZZ[i], (x-1), i) && yBar < (powerOmega * to_ZZ(Rho(sigma, to_RR(x)) - Y[i])))
-                            return s*x;
+                            if(!bit) {
+                                sample = s*x;
+                                bit = 1;
+                            }//end-if
                     else
-                        if(yBar <= to_ZZ(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i])))
-                           return s*x; 
+                        if(yBar <= to_ZZ(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i])) && !bit) {
+                           sample = s*x; 
+                           bit = 1;
+                        }//end-if
             }//end-else
+        nIterations++;
     }//end-while
+    
+    return sample;
     
 }//end-ZigguratO()
 
