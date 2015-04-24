@@ -10,6 +10,7 @@
 #include <NTL/ZZ.h>
 #include <NTL/ZZ_pEX.h>
 #include <NTL/RR.h>
+#include "Samplers.h"
 
 #ifndef HIBE_H
 #define	HIBE_H
@@ -27,11 +28,8 @@ public:
 //    void KeyDerive();
 //    void Encrypt();
 //    void Decrypt();
-    
-    /* Sampling from a discrete Gaussian distribution over the integers */
-    ZZ ZiggutatO(RR m, RR sigma, ZZ omega, RR n);
-    
-    /* Getters */
+        
+    /* Getters of Setup algorithm */
     long GetM() { return m; }    
     long GetN() { return n; }
     ZZ_pX GetF() const { return f; }
@@ -68,12 +66,10 @@ private:
     /* Master secret key */
     Vec< Vec<ZZX> > msk;
     
-    /* Ziggurat variables */
-    Vec<RR> X;
-    Vec<RR> Y;
-    Vec<ZZ> X_ZZ;
-    Vec<ZZ> Y_ZZ;
+    /* Sampling from Gaussian distributions */
+    Samplers sampler;
     
+    /* Methods */
     int IdealTrapGen();   
     
     /* Auxiliary functions of IdealTrapGen algorithm */
