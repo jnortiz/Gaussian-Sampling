@@ -11,11 +11,11 @@
 #include "Samplers.h"
 
 int main(void) {
-    
+        
     int action = 2;
     
     switch(action) {
-        case 1: {
+        case 1: { // Setup algorithm from HIBE scheme
             double lambda;
             int q, m1, m2, k, r, sigma;
 
@@ -61,24 +61,20 @@ int main(void) {
         }
         
         case 2: {
-            
-            RR m, sigma_RR, n;
-            ZZ omega;
-            
-            m = to_RR(63);
-            sigma_RR = to_RR(32);
-            n = to_RR(106);
-            omega = 106;
-            
-            int nSamples = 1000000;
-
+            /* Parameter set from (Roy et al., 2013). That depends on the cryptographic system requirements */
             Samplers sampler;
-            Vec<ZZ> poly;
-            poly = sampler.PolyGeneratorZiggurat(nSamples, m, sigma_RR, omega, n);
-//            cout << poly << endl;
-                        
+            int nSamples = 512; // #coefficients in the polynomial
+            RR nRectangles = to_RR(63); // Parameter of Ziggurat algorithm
+            RR sigma = to_RR(3.195); // Standard deviation
+            ZZ omega = to_ZZ(107); // Parameter of Ziggurat algorithm
+            RR precision = to_RR(107);
+            int tailcut = 13;    
+            
+            cout << sampler.PolyGeneratorZiggurat(nSamples, nRectangles, sigma, omega, precision, to_RR(tailcut)); // Coefficients, rectangles, sigma, omega and precision
+            cout << endl;
+            cout << sampler.PolyGeneratorKnuthYao(nSamples, to_int(precision), tailcut, sigma); // Coefficients, precision, tailcut, and sigma
             break;
-        }
+        }            
     }//end-switch
     
     return 0;

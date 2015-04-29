@@ -6,10 +6,9 @@
  */
 
 #include "Samplers.h"
-
 #include <NTL/ZZ_p.h>
-#include <NTL/mat_ZZ.h>
 #include <NTL/RR.h>
+#include <NTL/matrix.h>
 
 #define CONSTANT_TIME 1
 
@@ -151,7 +150,7 @@ ZZ Samplers::ZiggutatO(RR m, RR sigma, ZZ omega) {
 }//end-ZigguratO()
 
 // DZCreatePartition defines the x and y axes of rectangles in the Gaussian distribution
-void Samplers::DZCreatePartition(RR m, RR sigma, RR n) {
+void Samplers::DZCreatePartition(RR m, RR sigma, RR n, RR tail) {
     /*
      * Parameters description:
      * m: number of rectangles
@@ -169,7 +168,7 @@ void Samplers::DZCreatePartition(RR m, RR sigma, RR n) {
     this->X.SetLength(nRect + 1);
     this->Y.SetLength(nRect + 1);
             
-    tailcut = to_RR(13) * sigma; // We assume that tailcut = 13
+    tailcut = tail*sigma;
     
     while(tailcut < to_RR(14)*sigma) {
         
@@ -245,7 +244,7 @@ RR Samplers::DZRecursion(RR m, RR c, RR sigma) {
      * In the reference code, this statement is always executed. Although, it overwrites the 
      * "this->X[nRect] = tailcut;" statement in DZCreatePartition function.
      */
-    //    X[nRect] = to_RR(13*sigma);
+    //    X[nRect] = to_RR(tail*sigma);
     this->Y[nRect] = Rho(sigma, this->X[nRect]);
     
     inv = minus2 * log(S/to_RR(TruncToZZ(this->X[nRect]) + to_ZZ(1)));
@@ -269,7 +268,7 @@ RR Samplers::DZRecursion(RR m, RR c, RR sigma) {
     
 }//end-DZCreatePartition()
 
-Vec<ZZ> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega, RR n) {
+Vec<ZZ> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail) {
     
     cout << "[*] Ziggurat Gaussian sampling" << endl;
 
@@ -284,13 +283,13 @@ Vec<ZZ> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega,
     nPositive = nNegative = nZero = 0;
     
     // Creating the rectangles partitioning
-    this->DZCreatePartition(m, sigma, n);
+    this->DZCreatePartition(m, sigma, n, tail);
     
     // Following the reference implementation, omega = bit precision (n)    
     // Getting samples from the distribution    
     for(int i = 0; i < dimension; i++) {
         polynomial[i] = this->ZiggutatO(m, sigma, omega);
-        if(polynomial[i] <= 13*to_ZZ(sigma)) { // Tailcut t = 13
+        if(polynomial[i] <= to_ZZ(tail*sigma)) {
             if(polynomial[i] > 0)
                 nPositive++;
             else if(polynomial[i] < 0)
@@ -300,17 +299,159 @@ Vec<ZZ> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega,
         }//end-if
     }//end-for
 
-    cout << "\nPositive numbers: " << nPositive << endl;
+    cout << "Positive numbers: " << nPositive << endl;
     cout << "Negative numbers: " << nNegative << endl;
     cout << "Zero numbers: " << nZero << endl;
 
     int samplesGen = nPositive + nNegative + nZero;
 
     if(samplesGen == dimension)
-        cout << "All samples were successfully generated." << endl;
+        cout << "[*] All samples were successfully generated." << endl;
     else
-        cout << "Correctness percentage: " << (float)(100*samplesGen)/dimension << endl;
+        cout << "[*] Correctness percentage: " << (float)(100*samplesGen)/dimension << endl;
     
     return polynomial;
     
 }//end-PolyGeneratorZiggurat()
+   
+Vec<ZZ> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma) {
+    
+    cout << "\n[*] Knuth-Yao Gaussian sampling" << endl;
+    
+    /* Output precision setup */
+    RR::SetOutputPrecision(to_long(precision));
+    
+    Vec<ZZ> polynomial;
+    polynomial.SetLength((long)dimension);
+    
+    for(int i = 0; i < dimension; i++)
+        polynomial.put(i, this->KnuthYao(precision, tailcut, sigma));
+
+    return polynomial;
+    
+}//end-PolyGeneratorKnuthYao()
+
+ZZ Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
+    
+    if(this->P.NumRows() != precision) {
+        this->BuildProbabilityMatrix(precision, tailcut, sigma);
+        cout << "[*] Probability matrix building status: Pass!" << endl;
+    }//end-if
+    
+    ZZ d, r, S;
+    bool hit;
+    int bound, col, row;
+    d = 0;
+    hit = 0;
+    bound = tailcut*to_int(sigma);
+    row = 0;
+    
+#ifdef CONSTANT_TIME
+    
+    for(row; row < 20; row++) { // Search until the 20th row seems to be enough
+        r = RandomBits_long(1); // Random choice between 0 and 1
+        d = 2*d + r;
+        // The row denotes the x with probability expanded in binary as P[row]
+        for(col = 0; col < this->P.NumCols(); col++) { // It visits all rows of P from the bottom...
+            d = d - this->P[row][col];
+            if(d == -1 && !hit) { // d = 2*0 + 0 - 1 = -1; so, d starts as 0, r = 0 and P[row][col] = 1
+                S = col-bound;
+                hit = 1;
+            }
+        }//end-for
+    }//end-for
+    
+#else
+    
+    while(!hit) {        
+        r = RandomBits_long(1);
+        d = 2*d + r;
+        for(col = 0; col < this->P.NumCols(); col++) {
+            d = d - this->P[row][col];
+            if(d == -1) {
+                S = col-bound;                
+                hit = 1;
+                break;                
+            }
+        }//end-for
+        row++;
+    }//end-while    
+    
+#endif    
+    
+    return S;
+    
+}//end-Knuth-Yao
+
+/* It computes the probability associated with a sample x */
+RR Samplers::Probability(RR x, RR sigma) {
+    RR S = sigma*sqrt(2*ComputePi_RR());
+    RR overS = 1/S;
+    
+    if(x == to_RR(0))
+        return overS;
+    
+    return overS*exp(-(power(x/sigma, 2))/2.0);
+    
+}//end-Probability()
+
+/* Method for computing the binary expansion of a given probability in [0, 1] */
+void Samplers::BinaryExpansion(mat_ZZ& aux_P, RR probability, int precision, int index) {
+        
+    RR pow;
+    int i, j;
+    i = -1;
+    j = 0;
+    
+    while(probability > 0 && j < precision) {
+        pow = power2_RR(i--); // 2^{i}
+        if(pow <= probability) {
+            aux_P.put(index, j, to_ZZ(1));
+            probability -= pow;
+        } else
+            aux_P.put(index, j, to_ZZ(0));
+        j++;
+    }//end-while
+        
+}//end-BinaryExpansion
+
+void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma) {
+    
+    // The random variable consists of elements in [-tailcut*sigma, tailcut*sigma]
+    mat_ZZ aux_P;
+    int i, bound;
+    RR probOfX;
+    
+    i = 0;
+    bound = tailcut*to_int(sigma);
+    
+    aux_P.SetDims(2*bound+1, precision);
+    this->P.SetDims(precision, 2*bound+1);
+    
+    for(int x = -bound; x <= bound; x++, i++) {
+        probOfX = Probability(to_RR(x), sigma);
+        BinaryExpansion(aux_P, probOfX, precision, i);
+    }//end-for
+    
+    // Changing the elements positioning in P to decrease page fault in future accesses
+    int row_aux_P = 0;
+    for(int col = this->P.NumCols()-1; col >= 0; col--) {
+        for(int row = 0; row < this->P.NumRows(); row++)
+            this->P.put(row, col, aux_P.get(row_aux_P, row));
+        row_aux_P++;        
+    }//end-for
+    
+//    this->PrintMatrix("Probability matrix", this->P);
+    
+}//end-BuildProbabilityMatrix()
+
+void Samplers::PrintMatrix(const string& name, const mat_ZZ& matrix) {
+    
+    cout << "\n/** " << name << " **/" << endl;
+    for(int i = 0; i < matrix.NumRows(); i++) {
+        for(int j = 0; j < matrix.NumCols(); j++)
+            cout << matrix[i][j] << " ";
+        cout << endl;
+    }
+    
+}//end-PrintVectorZZX()

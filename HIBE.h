@@ -25,6 +25,7 @@ public:
     
     /* HIBE algorithms */
     void Setup(int h);
+// TODO:    
 //    void KeyDerive();
 //    void Encrypt();
 //    void Decrypt();
