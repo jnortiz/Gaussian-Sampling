@@ -9,13 +9,32 @@
 #include <NTL/ZZ_p.h>
 #include <NTL/RR.h>
 #include <NTL/matrix.h>
-
-#define CONSTANT_TIME 1
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
 
 using namespace NTL;
 using namespace std;
 
 Samplers::Samplers() {
+    
+    int randint;
+    int bytes_read;
+    int fd = open("/dev/urandom", O_RDONLY);
+    if (fd != -1) {
+        bytes_read = read(fd, &randint, sizeof(randint));
+        if (bytes_read != sizeof(randint)) {
+            fprintf(stderr, "read() failed (%d bytes read)\n", bytes_read);
+       }
+     }
+    else {
+        fprintf(stderr, "open() failed\n");
+    }
+    close(fd);
+          
+    NTL::SetSeed(to_ZZ(randint));
 }
 
 Samplers::Samplers(const Samplers& orig) {
@@ -54,27 +73,35 @@ ZZ Samplers::sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i) {
     
 }//end-sLine()
 
+
+int Select(int a, int b, unsigned bit) {
+    unsigned mask;
+    int output;
+    mask = -bit;
+    output = mask & (a ^ b);
+    output = output ^ a;
+    return output;
+}//end-Select()
+
 // Sampling algorithm with optimization to avoid Rho function computation
-ZZ Samplers::ZiggutatO(RR m, RR sigma, ZZ omega) {
+int Samplers::ZiggutatO(RR m, RR sigma, ZZ omega) {
         
-    ZZ curve, sigma_ZZ, s, sample, x, powerOmega, yPrime, yBar;
-    long int i, mInt;
+    ZZ b, curve, s, x, powerOmega, yPrime, yBar;
+    int i, invalidSample, mInt, sigmaInt, S;
+    unsigned bit, lastbit;    
         
     powerOmega = power2_ZZ(to_int(omega)); // 2^{\omega}
-    yPrime = RandomBnd(powerOmega - 1);                
+    yPrime = RandomBnd(powerOmega - 1);                 
+    mInt = to_int(m); // Number of rectangles
+    sigmaInt = to_int(sigma); 
+    invalidSample = 14*sigmaInt;
+    bit = 0;
     
-    mInt = to_int(m);
-    sigma_ZZ = to_ZZ(sigma);
-    unsigned bit = 0;    
-    sample = 14*sigma_ZZ;
-    ZZ b;
-    
-#ifdef CONSTANT_TIME
-    
-    int index;
-    for(index = 0; index < 3; index++) { // Estimated number of iterations required to obtain all requested samples
+    for(int index = 0; index < 3; index++) { // Estimated number of iterations required to obtain all requested samples
+        
+        lastbit = bit;        
         i = RandomBnd(mInt) + 1; // Sample a random value in {0, ..., m-1} and add one to the result, e.g. select a rectangle in {1, ..., m}
-        s = 1 - 2 * RandomBits_long(1); // Sample a random signal s
+        s = 1 - 2*RandomBits_long(1); // Sample a random signal s
         x = RandomBnd(this->X_ZZ[i] + 1); // Sample a x value between 0 and floor(x_i)
         b = RandomBits_long(1);
         yBar = yPrime * (this->Y_ZZ[i-1] - this->Y_ZZ[i]);
@@ -87,65 +114,22 @@ ZZ Samplers::ZiggutatO(RR m, RR sigma, ZZ omega) {
         bit = (x == to_ZZ(0) && b == to_ZZ(0))? 1 : 0;
                 
         // If x is in the right size of the i-th rectangle
-        bit = (this->X_ZZ[i] + 1 <= sigma_ZZ // In concave-down case
+        bit = (this->X_ZZ[i] + 1 <= sigmaInt // In concave-down case
             && (yBar <= powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1],this->Y_ZZ[i], x, i)
             ||  yBar <= curve ))? 1 : 0;        
-        bit = (sigma_ZZ <= this->X_ZZ[i-1] // In concave-up case
+        bit = (sigmaInt <= this->X_ZZ[i-1] // In concave-up case
             && yBar < powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1], this->Y_ZZ[i], (x-1), i) 
             && yBar < curve)? 1 : 0;
         bit = (yBar <= to_ZZ(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i])))? 1 : 0;
         
-        if(bit)            
-            sample = s*x;
-        
+        /* If the bit becomes 1, the valid sample s*x is assigned to S. 
+         * The bit is an or operation between the bit value of the last two iterations. 
+         * It prevents a valid sample to be overwritten. */
+        S = Select(invalidSample, to_int(s*x), bit | lastbit); 
+
     }//end-for
     
-#else
-    
-    while(!bit) {        
-        i = RandomBnd(mInt) + 1; // Sample a random value in {0, ..., m-1} and add one to the result, e.g. select a rectangle in {1, ..., m}
-        s = 1 - 2 * RandomBits_long(1); // Sample a random signal s
-        x = RandomBnd(this->X_ZZ[i] + 1); // Sample a x value between 0 and floor(x_i)
-        
-        if(x > to_ZZ(0) && x <= this->X_ZZ[i-1]) { // The sampled x is in the left side of the i-th rectangle
-            sample = s*x;
-            bit = 1;
-        }//end-if
-        else
-            if(x == to_ZZ(0)) {
-                b = RandomBits_long(1); // It selects between 0 or 1
-                if(b == to_ZZ(0)) {
-                    sample = s*x;
-                    bit = 1;
-                }//end-if
-            }//end-if
-            else {
-                yPrime = RandomBnd(powerOmega - 1);                
-                yBar = yPrime * (this->Y_ZZ[i-1] - this->Y_ZZ[i]);
-                curve = (powerOmega * to_ZZ(Rho(sigma, to_RR(x)) - Y[i]));
-                
-                if(this->X_ZZ[i] + 1 <= sigma_ZZ) // In concave-down case
-                    if(yBar <= powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1],this->Y_ZZ[i], x, i) || yBar <= curve) {
-                        sample = s*x;
-                        bit = 1;
-                    }//end-if
-                else
-                    if(sigma_ZZ <= this->X_ZZ[i-1]) // In concave-up case
-                        if(yBar < powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1], this->Y_ZZ[i], (x-1), i) && yBar < curve) {
-                            sample = s*x;
-                            bit = 1;
-                        }//end-if
-                    else
-                        if(yBar <= to_ZZ(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i]))) {
-                           sample = s*x; 
-                           bit = 1;
-                        }//end-if
-            }//end-else
-    }//end-while
-    
-#endif    
-    
-    return sample;    
+    return S;    
     
 }//end-ZigguratO()
 
@@ -215,7 +199,6 @@ void Samplers::DZCreatePartition(RR m, RR sigma, RR n, RR tail) {
             this->Y_ZZ[i] = to_ZZ(this->Y[i]);
         }//end-for
                 
-        cout << "Final distance: " << y0 << endl;
     }
     else // No valid partition was found
         cout << "[*] DZCreatePartition status: Error!" << endl;
@@ -268,14 +251,14 @@ RR Samplers::DZRecursion(RR m, RR c, RR sigma) {
     
 }//end-DZCreatePartition()
 
-Vec<ZZ> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail) {
+Vec<int> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail) {
     
     cout << "[*] Ziggurat Gaussian sampling" << endl;
 
     /* Output precision setup */
     RR::SetOutputPrecision(to_long(n));
     
-    Vec<ZZ> polynomial;    
+    Vec<int> polynomial;    
     polynomial.SetLength((long)dimension);
 
     // Only for statistical purposes
@@ -289,7 +272,7 @@ Vec<ZZ> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega,
     // Getting samples from the distribution    
     for(int i = 0; i < dimension; i++) {
         polynomial[i] = this->ZiggutatO(m, sigma, omega);
-        if(polynomial[i] <= to_ZZ(tail*sigma)) {
+        if(polynomial[i] <= to_int(tail*sigma)) {
             if(polynomial[i] > 0)
                 nPositive++;
             else if(polynomial[i] < 0)
@@ -299,9 +282,9 @@ Vec<ZZ> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega,
         }//end-if
     }//end-for
 
-    cout << "Positive numbers: " << nPositive << endl;
-    cout << "Negative numbers: " << nNegative << endl;
-    cout << "Zero numbers: " << nZero << endl;
+    cout << "  Positive numbers: " << nPositive << endl;
+    cout << "  Negative numbers: " << nNegative << endl;
+    cout << "  Zero numbers: " << nZero << endl;
 
     int samplesGen = nPositive + nNegative + nZero;
 
@@ -314,72 +297,64 @@ Vec<ZZ> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega,
     
 }//end-PolyGeneratorZiggurat()
    
-Vec<ZZ> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma) {
+Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma) {
     
     cout << "\n[*] Knuth-Yao Gaussian sampling" << endl;
     
     /* Output precision setup */
     RR::SetOutputPrecision(to_long(precision));
     
-    Vec<ZZ> polynomial;
-    polynomial.SetLength((long)dimension);
+    Vec<int> polynomial;
+    int samplesGen, iterations;
     
-    for(int i = 0; i < dimension; i++)
-        polynomial.put(i, this->KnuthYao(precision, tailcut, sigma));
+    polynomial.SetLength((long)dimension);
+    samplesGen = 0; // Count the number of successfully generated samples
+    iterations = 0;
+    
+//    do {
+        for(int i = 0; i < dimension; i++) {
+            polynomial.put(i, this->KnuthYao(precision, tailcut, sigma));
+            if(polynomial.get(i) <= tailcut*to_int(sigma))
+                samplesGen++;
+        }//end-for
+        iterations++;
+//    }while(samplesGen < dimension);
+    
+    if(samplesGen == dimension)
+        cout << "[*] All samples were successfully generated in " << iterations << " iteration(s)." << endl;
 
     return polynomial;
     
 }//end-PolyGeneratorKnuthYao()
 
-ZZ Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
+int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
     
     if(this->P.NumRows() != precision) {
         this->BuildProbabilityMatrix(precision, tailcut, sigma);
         cout << "[*] Probability matrix building status: Pass!" << endl;
     }//end-if
     
-    ZZ d, r, S;
-    bool hit;
-    int bound, col, row;
+    ZZ r;
+    int bound, col, d, S;
+    unsigned hit;
     d = 0;
     hit = 0;
     bound = tailcut*to_int(sigma);
-    row = 0;
     
-#ifdef CONSTANT_TIME
-    
-    for(row; row < 20; row++) { // Search until the 20th row seems to be enough
+    for(int row = 0; row < 20; row++) { // Search until the 20th row seems to be enough
         r = RandomBits_long(1); // Random choice between 0 and 1
-        d = 2*d + r;
+        d = 2*d + to_int(r);
         // The row denotes the x with probability expanded in binary as P[row]
         for(col = 0; col < this->P.NumCols(); col++) { // It visits all rows of P from the bottom...
-            d = d - this->P[row][col];
-            if(d == -1 && !hit) { // d = 2*0 + 0 - 1 = -1; so, d starts as 0, r = 0 and P[row][col] = 1
+            d = d - to_int(this->P[row][col]);
+            if(d == -1 && !hit) {
                 S = col-bound;
                 hit = 1;
-            }
+            }//end-if
         }//end-for
     }//end-for
     
-#else
-    
-    while(!hit) {        
-        r = RandomBits_long(1);
-        d = 2*d + r;
-        for(col = 0; col < this->P.NumCols(); col++) {
-            d = d - this->P[row][col];
-            if(d == -1) {
-                S = col-bound;                
-                hit = 1;
-                break;                
-            }
-        }//end-for
-        row++;
-    }//end-while    
-    
-#endif    
-    
-    return S;
+    return S; // It returns a variable instead of the position in the probability matrix
     
 }//end-Knuth-Yao
 

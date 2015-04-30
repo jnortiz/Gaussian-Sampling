@@ -22,8 +22,8 @@ public:
     Samplers(const Samplers& orig);
     virtual ~Samplers();
     
-    Vec<ZZ> PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail);
-    Vec<ZZ> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma);
+    Vec<int> PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail);
+    Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma);
     
 private:
     /* Knuth-Yao attributes */
@@ -36,8 +36,8 @@ private:
     Vec<ZZ> Y_ZZ;
 
     /* Sampling from a discrete Gaussian distribution over the integers */
-    ZZ ZiggutatO(RR m, RR sigma, ZZ omega);
-    ZZ KnuthYao(int precision, int tailcut, RR sigma);
+    int ZiggutatO(RR m, RR sigma, ZZ omega);
+    int KnuthYao(int precision, int tailcut, RR sigma);
     
     /* Auxiliary functions of Ziggurat algorithm */
     void DZCreatePartition(RR m, RR sigma, RR n, RR tail);

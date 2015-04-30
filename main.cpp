@@ -63,13 +63,14 @@ int main(void) {
         case 2: {
             /* Parameter set from (Roy et al., 2013). That depends on the cryptographic system requirements */
             Samplers sampler;
-            int nSamples = 512; // #coefficients in the polynomial
+            int nSamples = 1024; // #coefficients in the polynomial
             RR nRectangles = to_RR(63); // Parameter of Ziggurat algorithm
             RR sigma = to_RR(3.195); // Standard deviation
             ZZ omega = to_ZZ(107); // Parameter of Ziggurat algorithm
             RR precision = to_RR(107);
             int tailcut = 13;    
             
+            cout << ">> Generating " << nSamples << "-dimension polynomials <<" << endl;
             cout << sampler.PolyGeneratorZiggurat(nSamples, nRectangles, sigma, omega, precision, to_RR(tailcut)); // Coefficients, rectangles, sigma, omega and precision
             cout << endl;
             cout << sampler.PolyGeneratorKnuthYao(nSamples, to_int(precision), tailcut, sigma); // Coefficients, precision, tailcut, and sigma
