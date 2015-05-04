@@ -305,23 +305,26 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
     RR::SetOutputPrecision(to_long(precision));
     
     Vec<int> polynomial;
-    int samplesGen, iterations;
+    int bound, samplesGen, iterations;
     
     polynomial.SetLength((long)dimension);
-    samplesGen = 0; // Count the number of successfully generated samples
+    bound = tailcut*to_int(sigma);
     iterations = 0;
     
-//    do {
+    do {
+        samplesGen = 0; // It counts the number of successfully generated samples
         for(int i = 0; i < dimension; i++) {
             polynomial.put(i, this->KnuthYao(precision, tailcut, sigma));
-            if(polynomial.get(i) <= tailcut*to_int(sigma))
+            // Samples equal to the bound won't be accepted
+            if(polynomial.get(i) < bound && polynomial.get(i) > -bound)
                 samplesGen++;
         }//end-for
         iterations++;
-//    }while(samplesGen < dimension);
+    }while(samplesGen < dimension);
     
     if(samplesGen == dimension)
-        cout << "[*] All samples were successfully generated in " << iterations << " iteration(s)." << endl;
+        cout << "[*] All samples were successfully generated in " 
+                << iterations << " iteration(s)." << endl;
 
     return polynomial;
     
@@ -334,25 +337,39 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
         cout << "[*] Probability matrix building status: Pass!" << endl;
     }//end-if
     
-    ZZ r;
-    int bound, col, d, S;
-    unsigned hit;
-    d = 0;
-    hit = 0;
+    ZZ r; // Random bit
+    int bound, col, d, hit, invalidSample, searchRange, S;
     bound = tailcut*to_int(sigma);
+    d = 0; //Distance
+    hit = 0;
+    invalidSample = 3*bound;
+    /* Search range required to obtain all samples with only one iteration 
+     * in PolyGeneratorKnuthYao() algorithm */
+    searchRange = this->P.NumRows()/4;
+    S = 0; // Output sample
     
-    for(int row = 0; row < 20; row++) { // Search until the 20th row seems to be enough
+    for(int row = 0; row < searchRange; row++) {
         r = RandomBits_long(1); // Random choice between 0 and 1
         d = 2*d + to_int(r);
         // The row denotes the x with probability expanded in binary as P[row]
-        for(col = 0; col < this->P.NumCols(); col++) { // It visits all rows of P from the bottom...
+        for(col = 0; col < this->P.NumCols(); col++) {
             d = d - to_int(this->P[row][col]);
-            if(d == -1 && !hit) {
-                S = col-bound;
-                hit = 1;
+            
+            if(d == -1 && hit == 0) {
+                S += col;
+                hit += 1;
+            } else { // Either d != -1 or hit == 1
+                S += invalidSample;
+                hit += 0;
             }//end-if
+                
         }//end-for
     }//end-for
+    
+    /* Note: the "col" value is in [0, 2*bound]. So, the invalid sample must be 
+     * greater than 2*bound. */
+    S = S % invalidSample;
+    S -= bound;
     
     return S; // It returns a variable instead of the position in the probability matrix
     
