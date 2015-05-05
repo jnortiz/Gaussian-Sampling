@@ -311,7 +311,7 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
     bound = tailcut*to_int(sigma);
     iterations = 0;
     
-    do {
+//    do {
         samplesGen = 0; // It counts the number of successfully generated samples
         for(int i = 0; i < dimension; i++) {
             polynomial.put(i, this->KnuthYao(precision, tailcut, sigma));
@@ -320,7 +320,7 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
                 samplesGen++;
         }//end-for
         iterations++;
-    }while(samplesGen < dimension);
+//    }while(samplesGen < dimension);
     
     if(samplesGen == dimension)
         cout << "[*] All samples were successfully generated in " 
@@ -338,7 +338,9 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
     }//end-if
     
     ZZ r; // Random bit
-    int bound, col, d, hit, invalidSample, searchRange, S;
+    int bound, col, d, invalidSample, searchRange, S;
+    bool enable, hit;
+    
     bound = tailcut*to_int(sigma);
     d = 0; //Distance
     hit = 0;
@@ -355,14 +357,14 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
         for(col = 0; col < this->P.NumCols(); col++) {
             d = d - to_int(this->P[row][col]);
             
-            if(d == -1 && hit == 0) {
-                S += col;
-                hit += 1;
-            } else { // Either d != -1 or hit == 1
-                S += invalidSample;
-                hit += 0;
-            }//end-if
-                
+            // Enable turns one just in case d is equal to -1
+            enable = !(d+1);
+            
+            /* When enable&!hit becomes 1, "col" is added to "S";
+             * e.g. enable = 1 and hit = 0 */
+            S += Select(invalidSample, col, (enable & !hit));
+            hit += (enable & !hit);
+                            
         }//end-for
     }//end-for
     
