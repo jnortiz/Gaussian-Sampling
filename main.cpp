@@ -10,6 +10,14 @@
 #include "HIBE.h"
 #include "Samplers.h"
 
+typedef unsigned long long timestamp_t;
+
+static timestamp_t get_timestamp() {
+    struct timespec now;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+    return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
+}
+
 int main(void) {
         
     int action = 2;
@@ -70,10 +78,20 @@ int main(void) {
             RR precision = to_RR(107);
             int tailcut = 13;    
             
-            cout << ">> Generating " << nSamples << "-dimension polynomials <<" << endl;
-            cout << sampler.PolyGeneratorZiggurat(nSamples, nRectangles, sigma, omega, precision, to_RR(tailcut)); // Coefficients, rectangles, sigma, omega and precision
-            cout << endl;
-            cout << sampler.PolyGeneratorKnuthYao(nSamples, to_int(precision), tailcut, sigma); // Coefficients, precision, tailcut, and sigma
+            timestamp_t ts_start, ts_end;
+            
+            ts_start = get_timestamp();            
+            sampler.PolyGeneratorZiggurat(nSamples, nRectangles, sigma, omega, precision, to_RR(tailcut)); // Coefficients, rectangles, sigma, omega and precision
+            ts_end = get_timestamp();            
+                        
+            cout << "[!] Ziggurat running time for " << nSamples << " samples: " << ts_end - ts_start << endl;
+            
+            ts_start = get_timestamp();                        
+            sampler.PolyGeneratorKnuthYao(nSamples, to_int(precision), tailcut, sigma); // Coefficients, precision, tailcut, and sigma
+            ts_end = get_timestamp();            
+            
+            cout << "[!] Knuth running time for " << nSamples << " samples: " << ts_end - ts_start << endl;
+            
             break;
         }            
     }//end-switch

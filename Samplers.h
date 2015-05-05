@@ -19,7 +19,6 @@ class Samplers {
 public:
     
     Samplers();
-    Samplers(const Samplers& orig);
     virtual ~Samplers();
     
     Vec<int> PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail);
@@ -36,7 +35,7 @@ private:
     Vec<ZZ> Y_ZZ;
 
     /* Sampling from a discrete Gaussian distribution over the integers */
-    int ZiggutatO(RR m, RR sigma, ZZ omega);
+    int Ziggurat(RR m, RR sigma, ZZ omega);
     int KnuthYao(int precision, int tailcut, RR sigma);
     
     /* Auxiliary functions of Ziggurat algorithm */
