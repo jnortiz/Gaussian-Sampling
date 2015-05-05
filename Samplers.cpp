@@ -375,7 +375,7 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma) {
         BinaryExpansion(aux_P, probOfX, precision, i);
     }//end-for
     
-    // Changing the elements positioning in P to decrease page fault in future accesses
+    // Changing the elements positioning in P to decrease page fault in future access
     int row_aux_P = 0;
     for(int col = this->P.NumCols()-1; col >= 0; col--) {
         for(int row = 0; row < this->P.NumRows(); row++)
