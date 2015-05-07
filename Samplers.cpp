@@ -314,8 +314,8 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
     }//end-if
     
     ZZ r;
-    int bound, col, d, invalidSample, searchRange, S;
-    bool enable, hit;
+    int bound, col, d, i, invalidSample, searchRange, S;
+    unsigned aux, enable, hit;
     
     bound = tailcut*to_int(sigma);
     d = 0; //Distance
@@ -336,7 +336,11 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
             d = d - to_int(this->P[row][col]);
             
             // Enable turns one just in case d is equal to -1
-            enable = !(d+1);
+            enable = (unsigned)d;
+            for(i = 0; i < (sizeof(int)*8)-1; i++) {
+              aux = enable >> 1;
+              enable = enable & aux;
+            }//end-for
             
             /* When enable&!hit becomes 1, "col" is added to "S";
              * e.g. enable = 1 and hit = 0 */
