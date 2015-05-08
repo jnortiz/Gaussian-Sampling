@@ -115,8 +115,9 @@ Vec<int> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega
 int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
         
     ZZ b, s, x, powerOmega, yPrime, yBar;
-    int i, invalidSample, mInt, S;
-    unsigned bit, lastbit;
+    int i, invalidSample, j, mInt, S;
+    int bit, lastbit;
+    int isZero, aux;
         
     powerOmega = power2_ZZ(to_int(omega)); // 2^{\omega}
     mInt = to_int(m); // Number of rectangles
@@ -131,14 +132,24 @@ int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
         x = RandomBnd(this->X_ZZ[i] + 1); // Sample a x value between 0 and floor(x_i)
         b = RandomBits_long(1);
         
-        // The sampled x is in the left side of the i-th rectangle
+        // First case: The sampled x is in the left side of the i-th rectangle
         bit = (x > to_ZZ(0) && x <= this->X_ZZ[i-1])? 1 : 0;
         
-        // If x = 0, define s*x as a sample with probability of 50%
-        bit = (x == to_ZZ(0) && b == to_ZZ(0))? 1 : 0;
+        // Second case: If x = 0, define s*x as a sample with probability of 50%
+        isZero = to_int(-x);
+    
+        for(j = 0; j < (sizeof(int)*8)-1; j++) {
+          aux = isZero >> 1;
+          isZero = isZero | aux;
+        }//end-for
+        
+        isZero = (isZero+1)%2;        
+        bit = isZero & (b+1)%2;
                 
         yPrime = RandomBnd(powerOmega - 1);                 
         yBar = yPrime * (this->Y_ZZ[i-1] - this->Y_ZZ[i]);
+        
+        // Third case:
         bit = (yBar <= to_ZZ(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i])))? 1 : 0;
         
         /* If the bit becomes 1, the valid sample s*x is assigned to S. 
