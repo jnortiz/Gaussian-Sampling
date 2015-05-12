@@ -115,27 +115,25 @@ Vec<int> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega
 int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
         
     ZZ b, s, x, powerOmega, yPrime, yBar;
-    int i, invalidSample, j, mInt, S;
-    int bit, lastbit;
-    int isZero, aux;
+    int aux, bit, curve, i, invalidSample, isZero, j, mInt, S;
+    unsigned less, lessEqual, equal, greater;
         
     powerOmega = power2_ZZ(to_int(omega)); // 2^{\omega}
     mInt = to_int(m); // Number of rectangles
     invalidSample = 14*to_int(sigma);
     bit = 0;
     
-    for(int index = 0; index < 3; index++) { // Estimated number of iterations required to obtain all requested samples
-        
-        lastbit = bit;        
+    /* Estimated number of iterations required to obtain all requested samples 
+     * in one iteration of PolyGeneratorZiggurat algorithm */
+    for(int index = 0; index < 6; index++) { 
         i = RandomBnd(mInt) + 1; // Sample a random value in {0, ..., m-1} and add one to the result, e.g. select a rectangle in {1, ..., m}
         s = 1 - 2*RandomBits_long(1); // Sample a random signal s
         x = RandomBnd(this->X_ZZ[i] + 1); // Sample a x value between 0 and floor(x_i)
         b = RandomBits_long(1);
+        yPrime = RandomBnd(powerOmega - 1);                 
+        yBar = yPrime * (this->Y_ZZ[i-1] - this->Y_ZZ[i]);
+        curve = to_int(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i]));
         
-        // First case: The sampled x is in the left side of the i-th rectangle
-        bit = (x > to_ZZ(0) && x <= this->X_ZZ[i-1])? 1 : 0;
-        
-        // Second case: If x = 0, define s*x as a sample with probability of 50%
         isZero = to_int(-x);
     
         for(j = 0; j < (sizeof(int)*8)-1; j++) {
@@ -143,19 +141,45 @@ int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
           isZero = isZero | aux;
         }//end-for
         
-        isZero = (isZero+1)%2;        
-        bit = isZero & (b+1)%2;
-                
-        yPrime = RandomBnd(powerOmega - 1);                 
-        yBar = yPrime * (this->Y_ZZ[i-1] - this->Y_ZZ[i]);
+        greater = (isZero+1)%2; //Certainly x > 0 if it's not zero
         
-        // Third case:
-        bit = (yBar <= to_ZZ(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i])))? 1 : 0;
+        less = to_int(x) - this->X_ZZ[i-1]; //If x > X_ZZ[i] then "less" is a negative number
+        equal = less - 1;
+        
+        for(j = 0; j < sizeof(int)*8-1; j++)
+            less >>= 1;
+        
+        for(j = 0; j < sizeof(int)*8-1; j++) {
+            aux = equal >> 1;            
+            equal = equal & aux;
+        }//end-for
+        
+        lessEqual = less | equal;
+        
+        // First case: The sampled x is in the left side of the i-th rectangle; e.g., 0 < x <= this->X_ZZ[i-1]        
+        bit = (bit | (greater & lessEqual));
+        
+        // Second case: If x = 0, define s*x as a sample with probability of 50%        
+        bit = (bit | (isZero & (b+1)%2));
+                        
+        less = to_int(x) - curve;
+        equal = less - 1;
+        
+        for(j = 0; j < sizeof(int)*8-1; j++)
+            less >>= 1;
+        
+        for(j = 0; j < sizeof(int)*8-1; j++) {
+            aux = equal >> 1;            
+            equal = equal & aux; //If "equal" becomes 1, so x = 0
+        }//end-for        
+           
+        // Third case: the sampled x is below to the curve
+        bit = (bit | (less | equal));
         
         /* If the bit becomes 1, the valid sample s*x is assigned to S. 
          * The bit is an or operation between the bit value of the last two iterations. 
          * It prevents a valid sample to be overwritten. */
-        S = Select(invalidSample, to_int(s*x), bit | lastbit); 
+        S = Select(invalidSample, to_int(s*x), bit); 
 
     }//end-for
     
@@ -225,8 +249,8 @@ void Samplers::DZCreatePartition(RR m, RR sigma, RR n, RR tail) {
         long int i;
         // Computing the floor and ZZ format of values in X and Y vectors
         for(i = 0; i < this->X_ZZ.length(); i++) { // X and Y vectors have the same length m
-            this->X_ZZ[i] = to_ZZ(this->X[i]);
-            this->Y_ZZ[i] = to_ZZ(this->Y[i]);
+            this->X_ZZ[i] = to_int(this->X[i]);
+            this->Y_ZZ[i] = to_int(this->Y[i]);
         }//end-for
                 
     }

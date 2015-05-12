@@ -31,8 +31,8 @@ private:
     /* Ziggurat attributes */
     Vec<RR> X;
     Vec<RR> Y;
-    Vec<ZZ> X_ZZ;
-    Vec<ZZ> Y_ZZ;
+    Vec<int> X_ZZ;
+    Vec<int> Y_ZZ;
 
     /* Sampling from a discrete Gaussian distribution over the integers */
     int Ziggurat(RR m, RR sigma, ZZ omega);
