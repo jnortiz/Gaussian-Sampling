@@ -92,7 +92,7 @@ int main(void) {
             KnuthPoly = sampler.PolyGeneratorKnuthYao(nSamples, to_int(precision), tailcut, sigma); // Coefficients, precision, tailcut, and sigma
             ts_end = get_timestamp();            
             
-            cout << "[!] Knuth running time for " << nSamples << " samples: " << ts_end - ts_start << endl;
+            cout << "[!] Knuth-Yao running time for " << nSamples << " samples: " << ts_end - ts_start << endl;
             cout << KnuthPoly << endl;
             
             break;

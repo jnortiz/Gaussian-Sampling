@@ -26,7 +26,7 @@ public:
     
 private:
     /* Knuth-Yao attributes */
-    mat_ZZ P; // Probability matrix such as each polynomial will be a binary expansion of a probability
+    mat_ZZ P; // Probability matrix with binary expansion of probabilities
     
     /* Ziggurat attributes */
     Vec<RR> X;
