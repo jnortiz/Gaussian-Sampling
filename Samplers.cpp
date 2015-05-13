@@ -36,10 +36,9 @@ Samplers::Samplers() {
     
 }//end-Samplers()
 
-Samplers::~Samplers() {
-}
+Samplers::~Samplers() {};
 
-/* It calculates the probability associated to x */
+/* Probability associated with x */
 RR Samplers::Rho(RR sigma, RR x) {
     
     if(x == 0)
@@ -49,7 +48,6 @@ RR Samplers::Rho(RR sigma, RR x) {
     
 }//end-Rho()
 
-/* It computes the probability associated with a sample x */
 RR Samplers::Probability(RR x, RR sigma) {
     RR S = sigma*sqrt(2*ComputePi_RR());
     RR overS = 1/S;
@@ -61,8 +59,8 @@ RR Samplers::Probability(RR x, RR sigma) {
     
 }//end-Probability()
 
-/* It selects between two given values depending on bit value. If the bit value 
- * is zero, the output becomes "a" */
+/* It selects between two given values depending on a bit. 
+ * If the bit is zero, the output becomes "a" */
 int Select(int a, int b, unsigned bit) {
     unsigned mask;
     int output;
@@ -156,10 +154,11 @@ int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
         
         lessEqual = less | equal;
         
-        // First case: The sampled x is in the left side of the i-th rectangle; e.g., 0 < x <= this->X_ZZ[i-1]        
+        /* First case: The sampled x is in the left side of the i-th rectangle; 
+         * e.g., 0 < x <= this->X_ZZ[i-1] */
         bit = (bit | (greater & lessEqual));
         
-        // Second case: If x = 0, define s*x as a sample with probability of 50%        
+        /* Second case: If x = 0, define s*x as a sample with probability of 50% */
         bit = (bit | (isZero & (b+1)%2));
                         
         less = to_int(x) - curve;
@@ -173,11 +172,11 @@ int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
             equal = equal & aux; //If "equal" becomes 1, so x = 0
         }//end-for        
            
-        // Third case: the sampled x is below to the curve
+        /* Third case: the sampled x is below to the curve */
         bit = (bit | (less | equal));
         
         /* If the bit becomes 1, the valid sample s*x is assigned to S. 
-         * The bit is an or operation between the bit value of the last two iterations. 
+         * The bit is an OR operation between the last and the current bit value. 
          * It prevents a valid sample to be overwritten. */
         S = Select(invalidSample, to_int(s*x), bit); 
 
@@ -356,7 +355,8 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
     d = 0; //Distance
     hit = 0;
     invalidSample = 3*bound;
-    /* Search range required to obtain all samples with only one iteration 
+    
+    /* Approximated search range required to obtain all samples with only one iteration 
      * in PolyGeneratorKnuthYao() algorithm */
     searchRange = this->P.NumRows()/4;
     S = 0;
@@ -395,7 +395,7 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
 }//end-Knuth-Yao()
 
 /* This method build the probability matrix for samples in the range 
- * given by [-tailcut*\floor(sigma), +tailcut*\floor(sigma)] */
+ * [-tailcut*\floor(sigma), +tailcut*\floor(sigma)] */
 void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma) {
     
     // The random variable consists of elements in [-tailcut*sigma, tailcut*sigma]
@@ -422,6 +422,7 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma) {
         row_aux_P++;        
     }//end-for
     
+    // Uncomment this line if you want to preview the probability matrix P
 //    this->PrintMatrix("Probability matrix", this->P);
     
 }//end-BuildProbabilityMatrix()
