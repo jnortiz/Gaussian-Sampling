@@ -72,7 +72,7 @@ int main(void) {
             /* Parameter set from (Roy et al., 2013). That depends on the cryptographic system requirements */
             Vec<int> ZigguratPoly, KnuthPoly;
             Samplers sampler;
-            int nSamples = 1024; // #coefficients in the polynomial
+            int nSamples = 8194; // #coefficients in the polynomial
             RR nRectangles = to_RR(63); // Parameter of Ziggurat algorithm
             RR sigma = to_RR(3.195); // Standard deviation
             ZZ omega = to_ZZ(107); // Parameter of Ziggurat algorithm
@@ -85,14 +85,14 @@ int main(void) {
             ZigguratPoly = sampler.PolyGeneratorZiggurat(nSamples, nRectangles, sigma, omega, precision, to_RR(tailcut)); // Coefficients, rectangles, sigma, omega and precision
             ts_end = get_timestamp();            
                         
-            cout << "[!] Ziggurat running time for " << nSamples << " samples: " << ts_end - ts_start << endl;
+            cout << "[!] Ziggurat running time for " << nSamples << " samples: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
             cout << ZigguratPoly << endl;
             
             ts_start = get_timestamp();                        
             KnuthPoly = sampler.PolyGeneratorKnuthYao(nSamples, to_int(precision), tailcut, sigma); // Coefficients, precision, tailcut, and sigma
             ts_end = get_timestamp();            
             
-            cout << "[!] Knuth-Yao running time for " << nSamples << " samples: " << ts_end - ts_start << endl;
+            cout << "[!] Knuth-Yao running time for " << nSamples << " samples: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
             cout << KnuthPoly << endl;
             
             break;

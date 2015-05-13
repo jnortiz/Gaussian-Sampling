@@ -144,8 +144,7 @@ int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
         less = to_int(x) - this->X_ZZ[i-1]; //If x > X_ZZ[i] then "less" is a negative number
         equal = less - 1;
         
-        for(j = 0; j < sizeof(int)*8-1; j++)
-            less >>= 1;
+        less >>= sizeof(int)*8-1;
         
         for(j = 0; j < sizeof(int)*8-1; j++) {
             aux = equal >> 1;            
@@ -164,8 +163,7 @@ int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
         less = to_int(x) - curve;
         equal = less - 1;
         
-        for(j = 0; j < sizeof(int)*8-1; j++)
-            less >>= 1;
+        less >>= sizeof(int)*8-1;
         
         for(j = 0; j < sizeof(int)*8-1; j++) {
             aux = equal >> 1;            
