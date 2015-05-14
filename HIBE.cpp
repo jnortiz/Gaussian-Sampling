@@ -65,6 +65,28 @@ HIBE::HIBE(double q, int m1, int m2, int k, int sigma) {
 
 HIBE::~HIBE() {};
 
+RR HIBE::Probability(RR x, RR sigma) {
+    RR S = sigma*sqrt(2*ComputePi_RR());
+    RR overS = 1/S;
+    
+    if(x == to_RR(0))
+        return overS;
+    
+    return overS*exp(-(power(x/sigma, 2))/2.0);
+    
+}//end-Probability()
+
+/* It selects between two given values depending on a bit. 
+ * If the bit is zero, the output becomes "a" */
+int Select(int a, int b, unsigned bit) {
+    unsigned mask;
+    int output;
+    mask = -bit;
+    output = mask & (a ^ b);
+    output = output ^ a;
+    return output;
+}//end-Select()
+
 // The most expensive function in Ziggurat algorithm
 RR HIBE::Rho(RR sigma, RR x) {
     
@@ -294,6 +316,122 @@ RR HIBE::DZRecursion(RR m, RR c, RR sigma) {
     return this->Y[0];
     
 }//end-DZCreatePartition()
+
+Vec<int> HIBE::PolyGeneratorKnuthYaoO(int dimension, int precision, int tailcut, RR sigma) {
+    
+    cout << "\n[*] Knuth-Yao Gaussian sampling" << endl;
+    
+    /* Output precision setup */
+    RR::SetOutputPrecision(to_long(precision));
+    
+    this->BuildProbabilityMatrix(precision, tailcut, sigma);
+    cout << "[*] Probability matrix building status: Pass!" << endl;
+    
+    Vec<int> polynomial;
+    int bound, samplesGen, iterations;
+    
+    polynomial.SetLength((long)dimension);
+    bound = tailcut*to_int(sigma);
+    iterations = 0;
+    
+    do {
+        samplesGen = 0; // It counts the number of successfully generated samples
+        for(int i = 0; i < dimension; i++) {
+            polynomial.put(i, this->KnuthYaoO(tailcut, sigma));
+            // Samples equal to the bound won't be accepted
+            if(polynomial.get(i) < bound && polynomial.get(i) > -bound)
+                samplesGen++;
+        }//end-for
+        iterations++;
+    }while(samplesGen < dimension);
+    
+    if(samplesGen == dimension)
+        cout << "[*] All samples were successfully generated in " 
+                << iterations << " iteration(s)." << endl;
+
+    return polynomial;
+    
+}//end-PolyGeneratorKnuthYao()
+
+/* Knuth-Yao algorithm to obtain a sample from the discrete Gaussian */
+int HIBE::KnuthYaoO(int tailcut, RR sigma) {
+    
+    int bound, col, d, hit, row, S;
+    long r;
+    
+    d = 0;
+    hit = 0;
+    row = 0;
+    bound = tailcut*to_int(sigma);
+    
+    while(!hit) {
+        r = RandomBits_long(1); // Random choice between 0 and 1
+        d = 2*d + 1 - r;
+        
+        for(col = 0; col < this->P.NumCols(); col++) {
+            d = d - to_int(this->P[row][col]);
+            if(d == -1) {
+                S = col - bound;
+                hit = 1;
+                break;
+            }
+        }//end-for
+        row++;        
+    }//end-while
+    
+    return S;
+        
+}//end-Knuth-Yao()
+
+/* This method build the probability matrix for samples in the range 
+ * [-tailcut*\floor(sigma), +tailcut*\floor(sigma)] */
+void HIBE::BuildProbabilityMatrix(int precision, int tailcut, RR sigma) {
+    
+    // The random variable consists of elements in [-tailcut*sigma, tailcut*sigma]
+    mat_ZZ aux_P;
+    int i, bound;
+    RR probOfX;
+    
+    i = 0;
+    bound = tailcut*to_int(sigma);
+    
+    aux_P.SetDims(2*bound+1, precision);
+    this->P.SetDims(precision, 2*bound+1);
+    
+    for(int x = -bound; x <= bound; x++, i++) {
+        probOfX = Probability(to_RR(x), sigma);
+        BinaryExpansion(aux_P, probOfX, precision, i);
+    }//end-for
+    
+    // Changing the elements positioning in P to decrease page fault in future access
+    int row_aux_P = 0;
+    for(int col = this->P.NumCols()-1; col >= 0; col--) {
+        for(int row = 0; row < this->P.NumRows(); row++)
+            this->P.put(row, col, aux_P.get(row_aux_P, row));
+        row_aux_P++;        
+    }//end-for
+    
+}//end-BuildProbabilityMatrix()
+
+/* Method for computing the binary expansion of a given probability in [0, 1] */
+void HIBE::BinaryExpansion(mat_ZZ& aux_P, RR probability, int precision, int index) {
+        
+    RR pow;
+    int i, j;
+    i = -1;
+    j = 0;
+    
+    while(probability > 0 && j < precision) {
+        pow = power2_RR(i--); // 2^{i}
+        if(pow <= probability) {
+            aux_P.put(index, j, to_ZZ(1));
+            probability -= pow;
+        } else
+            aux_P.put(index, j, to_ZZ(0));
+        j++;
+    }//end-while
+        
+}//end-BinaryExpansion()
 
 void HIBE::Setup(int h) {
     

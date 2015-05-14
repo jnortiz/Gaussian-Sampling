@@ -75,8 +75,8 @@ int main(int argc, char** argv) {
         
         case 2: {
 
-            Vec<int> ZigguratPoly;
-            int nSamples = 1024; // #coefficients in the polynomial
+            Vec<int> ZigguratPoly, KnuthYaoPoly;
+            int nSamples = 1000000; // #coefficients in the polynomial
             RR nRectangles = to_RR(63); // Parameter of Ziggurat algorithm
             RR sigma = to_RR(3.195); // Standard deviation
             ZZ omega = to_ZZ(107); // Parameter of Ziggurat algorithm
@@ -91,6 +91,12 @@ int main(int argc, char** argv) {
                         
             cout << "[!] Ziggurat running time for " << nSamples << " samples: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
 //            cout << ZigguratPoly << endl;            
+            
+            ts_start = get_timestamp();            
+            KnuthYaoPoly =  hibe.PolyGeneratorKnuthYaoO(nSamples, to_int(precision), tailcut, sigma);
+            ts_end = get_timestamp();            
+            cout << "[!] Knuth-Yao running time for " << nSamples << " samples: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+//            cout << KnuthYaoPoly << endl;                        
             
             break;
         }

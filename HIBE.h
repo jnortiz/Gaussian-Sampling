@@ -10,6 +10,7 @@
 #include <NTL/ZZ.h>
 #include <NTL/ZZ_pEX.h>
 #include <NTL/RR.h>
+#include <NTL/mat_ZZ.h>
 
 #ifndef HIBE_H
 #define	HIBE_H
@@ -30,6 +31,7 @@ public:
     
     /* Sampling from a discrete Gaussian distribution over the integers */
     Vec<int> PolyGeneratorZigguratO(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail);
+    Vec<int> PolyGeneratorKnuthYaoO(int dimension, int precision, int tailcut, RR sigma);
     
     /* Getters */
     long GetM() { return m; }    
@@ -68,12 +70,16 @@ private:
     /* Master secret key */
     Vec< Vec<ZZX> > msk;
     
+    /* Knuth-Yao attributes */
+    mat_ZZ P; // Probability matrix with binary expansion of probabilities
+    
     /* Ziggurat variables */
     Vec<RR> X;
     Vec<RR> Y;
     Vec<ZZ> X_ZZ;
     Vec<ZZ> Y_ZZ;
     
+    int KnuthYaoO(int tailcut, RR sigma);
     int ZigguratO(RR m, RR sigma, ZZ omega);    
     int IdealTrapGen();   
     
@@ -96,6 +102,10 @@ private:
     RR DZRecursion(RR m, RR c, RR sigma);
     RR Rho(RR sigma, RR x);
     ZZ sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i);
+    
+    RR Probability(RR x, RR sigma);
+    void BinaryExpansion(mat_ZZ& aux_P, RR probability, int precision, int index);
+    void BuildProbabilityMatrix(int precision, int tailcut, RR sigma);
     
     /* Auxiliary functions */
     void PrintMatrixZZX(const string& name, const Vec< Vec<ZZX> >& M);
