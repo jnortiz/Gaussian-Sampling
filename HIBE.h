@@ -29,7 +29,7 @@ public:
 //    void Decrypt();
     
     /* Sampling from a discrete Gaussian distribution over the integers */
-    ZZ ZiggutatO(RR m, RR sigma, ZZ omega, RR n);
+    Vec<int> PolyGeneratorZigguratO(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail);
     
     /* Getters */
     long GetM() { return m; }    
@@ -74,6 +74,7 @@ private:
     Vec<ZZ> X_ZZ;
     Vec<ZZ> Y_ZZ;
     
+    int ZigguratO(RR m, RR sigma, ZZ omega);    
     int IdealTrapGen();   
     
     /* Auxiliary functions of IdealTrapGen algorithm */

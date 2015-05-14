@@ -7,8 +7,12 @@
  */
 
 #include "HIBE.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
 #include <math.h>
-#include <cstdio>
 #include <NTL/ZZ_p.h>
 #include <NTL/ZZXFactoring.h>
 #include <NTL/ZZ_pXFactoring.h>
@@ -22,7 +26,22 @@ using namespace std;
 using namespace NTL;
 
 HIBE::HIBE(double q, int m1, int m2, int k, int sigma) {
-        
+
+    int randint;
+    int bytes_read;
+    int fd = open("/dev/urandom", O_RDONLY);
+    
+    if (fd != -1) {
+        bytes_read = read(fd, &randint, sizeof(randint));
+        if (bytes_read != sizeof(randint))            
+            fprintf(stderr, "read() failed (%d bytes read)\n", bytes_read);
+    } else        
+        fprintf(stderr, "open() failed\n");
+    
+    close(fd);
+          
+    NTL::SetSeed(to_ZZ(randint));
+    
     this->lambda = ceil(1 + (log(q)/log(2)));    
     this->m = m1 + m2;
     this->n = pow(2, k);
@@ -76,20 +95,47 @@ ZZ HIBE::sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i) {
     
 }//end-sLine()
 
-// Sampling algorithm with optimization to avoid Rho function computation
-ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
+Vec<int> HIBE::PolyGeneratorZigguratO(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail) {
     
+    cout << "[*] Ziggurat Gaussian sampling" << endl;
+
     /* Output precision setup */
-    long bitPrecision;
-    bitPrecision = to_long(n);
-    RR::SetOutputPrecision(bitPrecision);
+    RR::SetOutputPrecision(to_long(n));
     
+    Vec<int> polynomial;    
+    polynomial.SetLength((long)dimension);
+
+    // Only for statistical purposes
+    int nIterations, nPositive, nNegative, nZero, samplesGen;
+    nIterations = 0;
+    nPositive = nNegative = nZero = 0;
+    
+    // Creating the rectangles partitioning
+    this->DZCreatePartition(m, sigma, n);
+    
+    // Following the reference implementation, omega = bit precision (n)    
+    // Getting samples from the discrete distribution    
+    do {
+        samplesGen = 0;
+        for(int i = 0; i < dimension; i++) {
+            polynomial[i] = this->ZigguratO(m, sigma, omega);
+            if(polynomial[i] <= to_int(tail*sigma))
+                samplesGen++;
+        }//end-for
+        nIterations++;
+    }while(samplesGen < dimension);
+
+    cout << "[*] All samples were successfully generated in " << nIterations << " iteration(s)." << endl;
+    
+    return polynomial;
+    
+}//end-PolyGeneratorZigguratO()
+
+// Sampling algorithm with optimization to avoid Rho function computation
+int HIBE::ZigguratO(RR m, RR sigma, ZZ omega) {
+        
     ZZ sigma_ZZ, s, x, powerOmega, yPrime, yBar;
     long int i, mInt;
-    
-    // Creating the rectangles partitioning if it was not done before
-    if(this->X.length() != to_long(m) + 1)
-        this->DZCreatePartition(m, sigma, n);
     
     powerOmega = power2_ZZ(to_int(omega)); // 2^{\omega}
     mInt = to_int(m);
@@ -101,13 +147,13 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
         x = RandomBnd(this->X_ZZ[i] + 1); // Sample a x value between 0 and floor(x_i)
         
         if(x > to_ZZ(0) && x <= this->X_ZZ[i-1]) // The sampled x is in the left side of the i-th rectangle
-            return s*x;
+            return to_int(s*x);
         else
             if(x == to_ZZ(0)) {
                 ZZ b;
                 b = RandomBits_long(1); // It selects between 0 or 1
                 if(b == to_ZZ(0))
-                    return s*x;
+                    return to_int(s*x);
             }//end-if
             else {
                 yPrime = RandomBnd(powerOmega - 1);                
@@ -115,14 +161,14 @@ ZZ HIBE::ZiggutatO(RR m, RR sigma, ZZ omega, RR n) {
                 
                 if(this->X_ZZ[i] + 1 <= sigma_ZZ) // In concave-down case
                     if(yBar <= powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1],this->Y_ZZ[i], x, i) || yBar <= (powerOmega * to_ZZ(Rho(sigma, to_RR(x)) - Y[i])))
-                        return s*x;
+                        return to_int(s*x);
                 else
                     if(sigma_ZZ <= this->X_ZZ[i-1]) // In concave-up case
                         if(yBar < powerOmega * sLine(this->X_ZZ[i-1], this->X_ZZ[i], this->Y_ZZ[i-1], this->Y_ZZ[i], (x-1), i) && yBar < (powerOmega * to_ZZ(Rho(sigma, to_RR(x)) - Y[i])))
-                            return s*x;
+                            return to_int(s*x);
                     else
                         if(yBar <= to_ZZ(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i])))
-                           return s*x; 
+                           return to_int(s*x); 
             }//end-else
     }//end-while
     
@@ -197,7 +243,6 @@ void HIBE::DZCreatePartition(RR m, RR sigma, RR n) {
             this->Y_ZZ[i] = to_ZZ(this->Y[i]);
         }//end-for
                 
-        cout << "Final distance: " << y0 << endl;
     }
     else // No valid partition was found
         cout << "[*] DZCreatePartition status: Error!" << endl;
