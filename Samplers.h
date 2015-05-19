@@ -21,12 +21,13 @@ public:
     Samplers();
     virtual ~Samplers();
     
-    Vec<int> PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail);
+    Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
     Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma);
     
 private:
     /* Knuth-Yao attributes */
-    mat_ZZ P; // Probability matrix with binary expansion of probabilities
+//    mat_ZZ P; // Probability matrix with binary expansion of probabilities
+    Vec< Vec<int> > P;
     
     /* Ziggurat attributes */
     Vec<RR> X;
@@ -35,21 +36,21 @@ private:
     Vec<int> Y_ZZ;
 
     /* Sampling from a discrete Gaussian distribution over the integers */
-    int Ziggurat(RR m, RR sigma, ZZ omega);
+    int Ziggurat(int m, RR sigma, int omega);
     int KnuthYao(int precision, int tailcut, RR sigma);
     
     /* Auxiliary functions of Ziggurat algorithm */
-    void DZCreatePartition(RR m, RR sigma, RR n, RR tail);
-    RR DZRecursion(RR m, RR c, RR sigma);
+    void DZCreatePartition(int m, RR sigma, int n, int tail);
+    RR DZRecursion(int m, int c, RR sigma);
     RR Rho(RR sigma, RR x);
     ZZ sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i);
     
     /* Auxiliary functions of Knuth-Yao algorithm */
     RR Probability(RR x, RR sigma);
-    void BinaryExpansion(mat_ZZ& aux_P, RR probability, int precision, int index);
+    void BinaryExpansion(RR probability, int precision, int index);
     void BuildProbabilityMatrix(int precision, int tailcut, RR sigma);
 
-    void PrintMatrix(const string& name, const mat_ZZ& matrix);
+    void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
     
 };
 

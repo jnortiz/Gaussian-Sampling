@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <NTL/c_lip.h>
 
 using namespace NTL;
 using namespace std;
@@ -70,20 +71,65 @@ int Select(int a, int b, unsigned bit) {
     return output;
 }//end-Select()
 
+/* Testing if x = 0 */
+int isZero(int x) {
+    
+    int aux, i, zero;
+    zero = -x;
+    
+    for(i = 0; i < (sizeof(int)*8)-1; i++) {
+      aux = zero >> 1;
+      zero = zero | aux;
+    }//end-for    
+    
+    return zero;
+    
+}//end-isZero()
+
+/* Testing if x is less than y */
+unsigned lessThan(int x, int y) {
+    
+    unsigned less;
+    
+    less = x - y;
+    less >>= sizeof(int)*8-1;
+    
+    return less;    
+    
+}//end-lessThan()
+
+/* Testing if x = y */
+unsigned isEqual(int x, int y) {
+    
+    unsigned equal;
+    int aux, j;
+    
+    equal = (x-y)-1;
+    
+    for(j = 0; j < sizeof(int)*8-1; j++) {
+        aux = equal >> 1;            
+        equal = equal & aux;
+    }//end-for
+    
+    return equal;
+    
+}//end-isEqual()
+
 /* It produces a n-dimension polynomial with coefficient sampled from a 
  * Gaussian distribution using Ziggurat algorithm */
-Vec<int> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega, RR n, RR tail) {
+Vec<int> Samplers::PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail) {
     
     cout << "[*] Ziggurat Gaussian sampling" << endl;
 
     /* Output precision setup */
-    RR::SetOutputPrecision(to_long(n));
+    RR::SetOutputPrecision((long)n);
     
     Vec<int> polynomial;    
     polynomial.SetLength((long)dimension);
 
     // Only for statistical purposes
-    int nIterations, nPositive, nNegative, nZero, samplesGen;
+    int bound, nIterations, nPositive, nNegative, nZero, samplesGen;
+    bound = to_int(tail*sigma);
     nIterations = 0;
     nPositive = nNegative = nZero = 0;
     
@@ -96,7 +142,7 @@ Vec<int> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega
         samplesGen = 0;
         for(int i = 0; i < dimension; i++) {
             polynomial[i] = this->Ziggurat(m, sigma, omega);
-            if(polynomial[i] <= to_int(tail*sigma))
+            if(polynomial[i] <= bound)
                 samplesGen++;
         }//end-for
         nIterations++;
@@ -110,47 +156,32 @@ Vec<int> Samplers::PolyGeneratorZiggurat(int dimension, RR m, RR sigma, ZZ omega
 
 /* Algorithm for sampling from discrete distribution using rejection method.
  * It does not avoid Rho function computation */
-int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
+int Samplers::Ziggurat(int m, RR sigma, int omega) {
         
-    ZZ b, s, x, powerOmega, yPrime, yBar;
-    int aux, bit, curve, i, invalidSample, isZero, j, mInt, S;
+    ZZ powerOmega, yPrime, yBar;
+    int bit, curve, i, invalidSample, zero, s, S, x;
     unsigned less, lessEqual, equal, greater;
+    long b;
         
-    powerOmega = power2_ZZ(to_int(omega)); // 2^{\omega}
-    mInt = to_int(m); // Number of rectangles
+    powerOmega = power2_ZZ(omega); // 2^{\omega}
     invalidSample = 14*to_int(sigma);
     bit = 0;
     
     /* Estimated number of iterations required to obtain all requested samples 
      * in one iteration of PolyGeneratorZiggurat algorithm */
     for(int index = 0; index < 6; index++) { 
-        i = RandomBnd(mInt) + 1; // Sample a random value in {0, ..., m-1} and add one to the result, e.g. select a rectangle in {1, ..., m}
+        i = RandomBnd(m) + 1; // Sample a random value in {0, ..., m-1} and add one to the result, e.g. select a rectangle in {1, ..., m}
         s = 1 - 2*RandomBits_long(1); // Sample a random signal s
         x = RandomBnd(this->X_ZZ[i] + 1); // Sample a x value between 0 and floor(x_i)
         b = RandomBits_long(1);
-        yPrime = RandomBnd(powerOmega - 1);                 
+        yPrime = RandomBnd(powerOmega - 1);
         yBar = yPrime * (this->Y_ZZ[i-1] - this->Y_ZZ[i]);
         curve = to_int(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i]));
         
-        isZero = to_int(-x);
-    
-        for(j = 0; j < (sizeof(int)*8)-1; j++) {
-          aux = isZero >> 1;
-          isZero = isZero | aux;
-        }//end-for
-        
-        greater = (isZero+1)%2; //Certainly x > 0 if it's not zero
-        
-        less = to_int(x) - this->X_ZZ[i-1]; //If x > X_ZZ[i] then "less" is a negative number
-        equal = less - 1;
-        
-        less >>= sizeof(int)*8-1;
-        
-        for(j = 0; j < sizeof(int)*8-1; j++) {
-            aux = equal >> 1;            
-            equal = equal & aux;
-        }//end-for
-        
+        zero = isZero(x);               
+        greater = (zero+1)%2; //Certainly x > 0 if it's not zero        
+        less = lessThan(x, this->X_ZZ[i-1]);
+        equal = isEqual(x, this->X_ZZ[i-1]);                
         lessEqual = less | equal;
         
         /* First case: The sampled x is in the left side of the i-th rectangle; 
@@ -158,25 +189,18 @@ int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
         bit = (bit | (greater & lessEqual));
         
         /* Second case: If x = 0, define s*x as a sample with probability of 50% */
-        bit = (bit | (isZero & (b+1)%2));
+        bit = (bit | (zero & (b+1)%2));
                         
-        less = to_int(x) - curve;
-        equal = less - 1;
+        less = lessThan(x, curve);
+        equal = isEqual(x, curve);
         
-        less >>= sizeof(int)*8-1;
-        
-        for(j = 0; j < sizeof(int)*8-1; j++) {
-            aux = equal >> 1;            
-            equal = equal & aux; //If "equal" becomes 1, so x = 0
-        }//end-for        
-           
         /* Third case: the sampled x is below to the curve */
         bit = (bit | (less | equal));
         
         /* If the bit becomes 1, the valid sample s*x is assigned to S. 
          * The bit is an OR operation between the last and the current bit value. 
          * It prevents a valid sample to be overwritten. */
-        S = Select(invalidSample, to_int(s*x), bit); 
+        S = Select(invalidSample, s*x, bit); 
 
     }//end-for
     
@@ -185,7 +209,7 @@ int Samplers::Ziggurat(RR m, RR sigma, ZZ omega) {
 }//end-ZigguratO()
 
 /* DZCreatePartition defines the x and y axes of rectangles in the Gaussian distribution */
-void Samplers::DZCreatePartition(RR m, RR sigma, RR n, RR tail) {
+void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail) {
     /*
      * Parameters description:
      * m: number of rectangles
@@ -194,22 +218,22 @@ void Samplers::DZCreatePartition(RR m, RR sigma, RR n, RR tail) {
      */
     
     // The approximation error must be less than 2^{-n}
-    RR statDistance = power2_RR(-to_long(n));
+    RR statDistance = power2_RR(-((long)n));
     
-    RR c, tailcut, y0;
-    long nRect = to_long(m);
+    RR tailcut, y0;
+    int c;
     bool validPartition = 0;
     
-    this->X.SetLength(nRect + 1);
-    this->Y.SetLength(nRect + 1);
+    this->X.SetLength(m + 1);
+    this->Y.SetLength(m + 1);
             
-    tailcut = tail*sigma;
+    tailcut = to_RR(tail)*sigma;
     
     while(tailcut < to_RR(14)*sigma) {
         
-        c = to_RR(1);        
+        c = 1;        
         y0 = to_RR(0);
-        this->X[nRect] = tailcut;        
+        this->X[m] = tailcut;        
         
         while(y0 < 1 || abs(y0)-1 > statDistance) {
             
@@ -258,14 +282,12 @@ void Samplers::DZCreatePartition(RR m, RR sigma, RR n, RR tail) {
 }//end-DZCreatePartition()
 
 /* It is used in DZCreatePartition to define the distance y0 */
-RR Samplers::DZRecursion(RR m, RR c, RR sigma) {
+RR Samplers::DZRecursion(int m, int c, RR sigma) {
     
     RR inv, minus2, overM, over2, S;
-    int nRect;
     
-    nRect = to_int(m);
     minus2 = to_RR(-2);
-    overM = to_RR(1)/m;
+    overM = to_RR(1)/to_RR(m);
     over2 = to_RR(1)/to_RR(2);
     
     if(inv < to_RR(0))
@@ -279,14 +301,14 @@ RR Samplers::DZRecursion(RR m, RR c, RR sigma) {
      * "this->X[nRect] = tailcut;" statement in DZCreatePartition function.
      */
     //    X[nRect] = to_RR(tail*sigma);
-    this->Y[nRect] = Rho(sigma, this->X[nRect]);
+    this->Y[m] = Rho(sigma, this->X[m]);
     
-    inv = minus2 * log(S/to_RR(TruncToZZ(this->X[nRect]) + to_ZZ(1)));
+    inv = minus2 * log(S/to_RR(TruncToZZ(this->X[m]) + to_ZZ(1)));
     
-    this->X[nRect-1] = sigma * sqrt(inv);
-    this->Y[nRect-1] = Rho(sigma, this->X[nRect-1]);
+    this->X[m-1] = sigma * sqrt(inv);
+    this->Y[m-1] = Rho(sigma, this->X[m-1]);
     
-    for(int i = nRect-2; i > 0; i--) {
+    for(int i = m-2; i > 0; i--) {
         inv = minus2 * log(S/to_RR(TruncToZZ(this->X[i+1]) + to_ZZ(1))) + Rho(sigma, this->X[i]);
         
         if(inv < to_RR(0))
@@ -310,6 +332,9 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
     
     /* Output precision setup */
     RR::SetOutputPrecision(to_long(precision));
+    
+    this->BuildProbabilityMatrix(precision, tailcut, sigma);
+    cout << "[*] Probability matrix building status: Pass!" << endl;
     
     Vec<int> polynomial;
     int bound, samplesGen, iterations;
@@ -340,33 +365,29 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
 /* Knuth-Yao algorithm to obtain a sample from the discrete Gaussian */
 int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
     
-    if(this->P.NumRows() != precision) {
-        this->BuildProbabilityMatrix(precision, tailcut, sigma);
-        cout << "[*] Probability matrix building status: Pass!" << endl;
-    }//end-if
-    
-    ZZ r;
-    int bound, col, d, i, invalidSample, searchRange, S;
+    int bound, col, d, i, invalidSample, pNumRows, pNumCols, r, searchRange, S;
     unsigned aux, enable, hit;
     
     bound = tailcut*to_int(sigma);
     d = 0; //Distance
     hit = 0;
     invalidSample = 3*bound;
+    pNumRows = precision;
+    pNumCols = 2*bound+1;    
     
     /* Approximated search range required to obtain all samples with only one iteration 
      * in PolyGeneratorKnuthYao() algorithm */
-    searchRange = this->P.NumRows()/4;
+    searchRange = pNumRows/4;
     S = 0;
     
     for(int row = 0; row < searchRange; row++) {
         
         r = RandomBits_long(1); // Random choice between 0 and 1
-        d = 2*d + to_int(r); // Distance calculus
+        d = 2*d + r; // Distance calculus
         
-        for(col = 0; col < this->P.NumCols(); col++) {
+        for(col = 0; col < pNumCols; col++) {
             
-            d = d - to_int(this->P[row][col]);
+            d = d - this->P[row][col];
             
             // Enable turns one just in case d is equal to -1
             enable = (unsigned)d;
@@ -397,37 +418,29 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
 void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma) {
     
     // The random variable consists of elements in [-tailcut*sigma, tailcut*sigma]
-    mat_ZZ aux_P;
     int i, bound;
     RR probOfX;
     
-    i = 0;
-    bound = tailcut*to_int(sigma);
+    bound = tailcut*to_int(sigma);    
     
-    aux_P.SetDims(2*bound+1, precision);
-    this->P.SetDims(precision, 2*bound+1);
-    
-    for(int x = -bound; x <= bound; x++, i++) {
+    this->P.SetLength(precision);    
+    for(i = 0; i < this->P.length(); i++)
+        this->P[i].SetLength(2*bound+1);
+
+    i = 2*bound;    
+    for(int x = -bound; x <= bound, i>= 0; x++, i--) {
         probOfX = Probability(to_RR(x), sigma);
-        BinaryExpansion(aux_P, probOfX, precision, i);
+        BinaryExpansion(probOfX, precision, i);
     }//end-for
-    
-    // Changing the elements positioning in P to decrease page fault in future access
-    int row_aux_P = 0;
-    for(int col = this->P.NumCols()-1; col >= 0; col--) {
-        for(int row = 0; row < this->P.NumRows(); row++)
-            this->P.put(row, col, aux_P.get(row_aux_P, row));
-        row_aux_P++;        
-    }//end-for
-    
+       
     // Uncomment this line if you want to preview the probability matrix P
 //    this->PrintMatrix("Probability matrix", this->P);
     
 }//end-BuildProbabilityMatrix()
 
 /* Method for computing the binary expansion of a given probability in [0, 1] */
-void Samplers::BinaryExpansion(mat_ZZ& aux_P, RR probability, int precision, int index) {
-        
+void Samplers::BinaryExpansion(RR probability, int precision, int index) {
+    
     RR pow;
     int i, j;
     i = -1;
@@ -436,20 +449,20 @@ void Samplers::BinaryExpansion(mat_ZZ& aux_P, RR probability, int precision, int
     while(probability > 0 && j < precision) {
         pow = power2_RR(i--); // 2^{i}
         if(pow <= probability) {
-            aux_P.put(index, j, to_ZZ(1));
+            this->P[j][index] = 1;
             probability -= pow;
         } else
-            aux_P.put(index, j, to_ZZ(0));
+            this->P[j][index] = 0;
         j++;
     }//end-while
-        
+            
 }//end-BinaryExpansion()
 
-void Samplers::PrintMatrix(const string& name, const mat_ZZ& matrix) {
+void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
     
     cout << "\n/** " << name << " **/" << endl;
-    for(int i = 0; i < matrix.NumRows(); i++) {
-        for(int j = 0; j < matrix.NumCols(); j++)
+    for(int i = 0; i < matrix.length(); i++) {
+        for(int j = 0; j < matrix[0].length(); j++)
             cout << matrix[i][j] << " ";
         cout << endl;
     }//end-for
