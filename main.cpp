@@ -20,17 +20,17 @@ static timestamp_t get_timestamp() {
 
 int main(void) {
         
-    int action = 2;
+    int action = 3;
+    int k = 8; // n = 2^k is the degree of polynomials in R and R_0
     
     switch(action) {
         case 1: { // Setup algorithm from HIBE scheme
             double lambda;
-            int q, m1, m2, k, r, sigma;
+            int q, m1, m2, r, sigma;
 
             q = 587; //q must be prime and congruent to 3 mod 8
             m1 = 13;
             m2 = 150; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
-            k = 8; // n = 2^k is the degree of polynomials in R and R_0
 
             r = ceil((double)(1 + (log(q)/log(3))));
             sigma = 1;
@@ -102,7 +102,14 @@ int main(void) {
             cout << KnuthPoly << endl;
             
             break;
-        }            
+        }
+        case 3: {
+            Samplers sampler;
+            k = 3;//For testing
+            sampler.BuildVandermondMatrix(k);// m = 2^k
+            break;
+        }
+            
     }//end-switch
     
     return 0;

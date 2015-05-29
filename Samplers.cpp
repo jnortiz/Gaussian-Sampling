@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <NTL/c_lip.h>
+#include <complex>
 
 using namespace NTL;
 using namespace std;
@@ -468,3 +469,32 @@ void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
     }//end-for
     
 }//end-PrintVectorZZX()
+
+void Samplers::BuildVandermondMatrix(int k) { //m = 2^k
+    
+    complex<double> rootOfUnity;
+    double pi;
+    int i, j, m, phi;
+    
+    pi = NTL::to_double(ComputePi_RR());
+    m = pow(2, k);
+    phi = this->EulerPhiPowerOfTwo(k);
+    
+    this->V.SetLength(phi); //Phi rows
+    
+    for(i = 0; i < phi; i++) {
+        
+        this->V[i].SetLength(m); //And m columns        
+        rootOfUnity = std::polar(1.0, (double)((2*pi*i)/(double)m));
+        
+        for(j = 0; j < m; j++)
+            this->V[i][j] = pow(rootOfUnity, j);        
+        
+    }//end-for
+    
+}//end-BuildVandermondMatrix()
+
+/* Computation of Euler's phi function for m = 2^k, p = 2 */
+int Samplers::EulerPhiPowerOfTwo(int k) {
+    return pow(2, k-1);    
+}//end-EulerPhiPowerOfTwo()

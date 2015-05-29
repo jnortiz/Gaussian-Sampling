@@ -8,6 +8,7 @@
 #include <NTL/ZZ.h>
 #include <NTL/RR.h>
 #include <NTL/mat_ZZ.h>
+#include <complex>
 
 #ifndef SAMPLERS_H
 #define	SAMPLERS_H
@@ -23,10 +24,17 @@ public:
     
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
     Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma);
+    void BuildVandermondMatrix(int k);
     
 private:
+    
+    /* Attributes for sampling from lattice */
+    Vec< complex<double> > rootsOfUnity;
+    Vec< Vec< complex<double> > > V;
+    
+    int EulerPhiPowerOfTwo(int k);
+    
     /* Knuth-Yao attributes */
-//    mat_ZZ P; // Probability matrix with binary expansion of probabilities
     Vec< Vec<int> > P;
     
     /* Ziggurat attributes */
