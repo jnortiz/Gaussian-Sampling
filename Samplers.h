@@ -24,16 +24,14 @@ public:
     
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
     Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma);
-    void BuildVandermondMatrix(int k);
+    void InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b, int k);
+    
     
 private:
     
     /* Attributes for sampling from lattice */
-    Vec< complex<double> > rootsOfUnity;
     Vec< Vec< complex<double> > > V;
-    
-    int EulerPhiPowerOfTwo(int k);
-    
+        
     /* Knuth-Yao attributes */
     Vec< Vec<int> > P;
     
@@ -58,6 +56,12 @@ private:
     void BinaryExpansion(RR probability, int precision, int index);
     void BuildProbabilityMatrix(int precision, int tailcut, RR sigma);
 
+    /* Auxiliary functions of lattice sampler */
+    void BuildVandermondeMatrix(int k);
+    int EulerPhiPowerOfTwo(int k);
+    void ConjugateOfMatrix(Vec< Vec< complex<double> > >& M);    
+    void ComplexMatrixMult(Vec< Vec< int > >& c, const Vec< Vec< complex<double> > >& a, const Vec< Vec< complex<double> > >& b);
+    
     void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
     
 };

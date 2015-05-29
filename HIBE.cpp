@@ -458,7 +458,7 @@ void HIBE::Mult(Vec< Vec<ZZX> >& c, const Vec< Vec<ZZX> >& a, const Vec< Vec<ZZX
         for(int j = 0; j < b[0].length(); j++) { 
             for(int h = 0; h < b.length(); h++)
                 column[h] = b[h][j];
-            Mult(c[i][j], a[i], column);//[*]  
+            this->Mult(c[i][j], a[i], column);//[*]  
         }//end-for
     }//end-for
     

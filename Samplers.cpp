@@ -459,18 +459,62 @@ void Samplers::BinaryExpansion(RR probability, int precision, int index) {
             
 }//end-BinaryExpansion()
 
-void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
+void Samplers::InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b, int k) {
+    // <a, b> = a^{T} * \bar{V^{T}} * V * b
     
-    cout << "\n/** " << name << " **/" << endl;
-    for(int i = 0; i < matrix.length(); i++) {
-        for(int j = 0; j < matrix[0].length(); j++)
-            cout << matrix[i][j] << " ";
-        cout << endl;
+    /* Building V matrix */
+    this->BuildVandermondeMatrix(k);
+    
+    int colsV, i, j, rowsV;
+    colsV = this->V[0].length();
+    rowsV = this->V.length();
+    
+    Vec< Vec< complex<double > > > transpV;
+    Vec< Vec<int> > C;
+    transpV.SetLength(colsV);
+    C.SetLength(colsV);
+    
+    for(i = 0; i < colsV; i++) {
+        C[i].SetLength(colsV);
+        transpV[i].SetLength(rowsV);
     }//end-for
     
-}//end-PrintVectorZZX()
+    /* Transposition of Vandermonde matrix V */
+    for(i = 0; i < colsV; i++)
+        for(j = 0; j < rowsV; j++)
+            transpV[i][j] = this->V[j][i];
+    
+    /* Computation of \bar{V^{T}} */
+    this->ConjugateOfMatrix(transpV);
+    
+    /* Multiplication \bar{V^{T}} * V */
+    this->ComplexMatrixMult(C, transpV, this->V);
+    
+    /* D = a^{T} * \bar{V^{T}} * V */
+    Vec<int> D;
+    int sum;
+    D.SetLength(colsV);
+    
+    for(i = 0; i < colsV; i++) {
+        sum = 0;
+        for(j = 0; j < colsV; j++)
+            sum = sum + a[j]*C[j][i];
+        D[i] = sum;
+    }//end-for
+    
+    /* E = D * b */
+    Vec<int> E;
+    E.SetLength(colsV);
+    
+    sum = 0;
+    for(i = 0; i < colsV; i++)
+        sum += D[i]*b[i];
+    
+    out = sum;
+    
+}//end-InnerProduct()
 
-void Samplers::BuildVandermondMatrix(int k) { //m = 2^k
+void Samplers::BuildVandermondeMatrix(int k) { //m = 2^k
     
     complex<double> rootOfUnity;
     double pi;
@@ -498,3 +542,56 @@ void Samplers::BuildVandermondMatrix(int k) { //m = 2^k
 int Samplers::EulerPhiPowerOfTwo(int k) {
     return pow(2, k-1);    
 }//end-EulerPhiPowerOfTwo()
+
+void Samplers::ConjugateOfMatrix(Vec< Vec< complex<double> > >& M) {
+    
+    int cols, rows;
+    cols = M[0].length();
+    rows = M.length();
+    
+    for(int i = 0; i < rows; i++)
+        for(int j = 0; j < cols; j++)
+            M[i][j] = std::conj(M[i][j]);
+    
+}//end-ConjugateOfMatrix()
+
+/* Matrix multiplication of complex numbers */
+void Samplers::ComplexMatrixMult(Vec< Vec< int > >& c, const Vec< Vec< complex<double> > >& a, const Vec< Vec< complex<double> > >& b) {       
+
+    int colsA, colsB, i, j, k, rowsA, rowsB;
+    colsA = a[0].length();
+    colsB = b[0].length();
+    rowsA = a.length();
+    rowsB = b.length();
+    
+    if(colsA == rowsB) {
+        
+        complex<double> sum = 0;
+        
+        c.SetLength(rowsA);
+        for(i = 0; i < rowsA; i++)
+            c[i].SetLength(colsB);        
+        
+        for (k = 0; k < rowsA; k++)
+          for (j = 0; j < colsB; j++) {
+            for (i = 0; i < rowsB; i++)
+              sum = sum + a[k][i]*b[i][j];
+
+            c[k][j] = sum.real();
+            sum = 0;
+          }//end-for
+        
+    }//end-if
+    
+}//end-Mult()
+
+void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
+    
+    cout << "\n/** " << name << " **/" << endl;
+    for(int i = 0; i < matrix.length(); i++) {
+        for(int j = 0; j < matrix[0].length(); j++)
+            cout << matrix[i][j] << " ";
+        cout << endl;
+    }//end-for
+    
+}//end-PrintVectorZZX()

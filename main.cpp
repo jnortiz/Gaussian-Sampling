@@ -105,8 +105,33 @@ int main(void) {
         }
         case 3: {
             Samplers sampler;
+
             k = 3;//For testing
-            sampler.BuildVandermondMatrix(k);// m = 2^k
+            int m = 8;
+
+            int out;
+            Vec< int > a, b;
+            a.SetLength(m);
+            b.SetLength(m);
+            
+            for(int i = 0; i < m; i++) {
+                a[i] = NTL::RandomBnd(7);
+                b[i] = NTL::RandomBnd(7);
+            }
+            
+            cout << "Polynomial a: ";
+            for(int i = 0; i < m; i++)
+                cout << a[i] << " ";
+            cout << endl;
+            cout << "Polynomial b: ";            
+            for(int i = 0; i < m; i++)
+                cout << b[i] << " ";
+            cout << endl;
+            
+            sampler.InnerProduct(out, a, b, k);
+            
+            cout << "<a, b>: " << out << endl;
+            
             break;
         }
             
