@@ -68,7 +68,7 @@ private:
     Vec< Vec<ZZX> > msk;
     
     /* Sampling from Gaussian distributions */
-    Samplers sampler;
+    Samplers *sampler;
     
     /* Methods */
     int IdealTrapGen();   

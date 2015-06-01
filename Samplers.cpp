@@ -19,7 +19,7 @@
 using namespace NTL;
 using namespace std;
 
-Samplers::Samplers() {
+Samplers::Samplers(int k) {
     
     int randint;
     int bytes_read;
@@ -35,6 +35,9 @@ Samplers::Samplers() {
     close(fd);
           
     NTL::SetSeed(to_ZZ(randint));
+    
+    //It's used for sampling from lattice
+    this->BuildVandermondeMatrix(k);
     
 }//end-Samplers()
 
@@ -459,11 +462,42 @@ void Samplers::BinaryExpansion(RR probability, int precision, int index) {
             
 }//end-BinaryExpansion()
 
-void Samplers::InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b, int k) {
-    // <a, b> = a^{T} * \bar{V^{T}} * V * b
+void Samplers::Isometry(Vec<int>& out, const Vec<int>& b) {
     
-    /* Building V matrix */
-    this->BuildVandermondeMatrix(k);
+}
+
+void Samplers::Norm(double& out, const Vec<int>& b) {
+    
+    Vec<double> mult;
+    double sum;
+    int colsV, i, j, rowsV;
+    
+    colsV = this->V[0].length();
+    rowsV = this->V.length();
+    mult.SetLength(rowsV);
+    
+    /* Each row contains b(\psi_m^{i}) */
+    for(i = 0; i < rowsV; i++) {
+        sum = 0.0;
+        for(j = 0; j < colsV; j++)
+            sum += this->V[i][j].real()*(double)b[j];
+        mult[i] = sum;
+    }//end-for
+    
+    sum = 0.0;
+    for(i = 0; i < rowsV; i++) {
+        if(mult[i] < 0) //Absolute value
+            mult[i] = -mult[i];
+        sum += pow(mult[i], 2.0);
+    }//end-for
+    
+    out = sqrt(sum);
+    
+}//end-Norm()
+
+/* Computation of the inner product as matrix multiplication */
+void Samplers::InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b) {
+    // <a, b> = a^{T} * \bar{V^{T}} * V * b
     
     int colsV, i, j, rowsV;
     colsV = this->V[0].length();
@@ -484,10 +518,10 @@ void Samplers::InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b, int 
         for(j = 0; j < rowsV; j++)
             transpV[i][j] = this->V[j][i];
     
-    /* Computation of \bar{V^{T}} */
+    /* Computation of conjugate of V^{T} */
     this->ConjugateOfMatrix(transpV);
     
-    /* Multiplication \bar{V^{T}} * V */
+    /* Integer matrix multiplication \bar{V^{T}} * V */
     this->ComplexMatrixMult(C, transpV, this->V);
     
     /* D = a^{T} * \bar{V^{T}} * V */
@@ -506,19 +540,19 @@ void Samplers::InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b, int 
     Vec<int> E;
     E.SetLength(colsV);
     
+    /* Final computation. The output is an integer */
     sum = 0;
     for(i = 0; i < colsV; i++)
         sum += D[i]*b[i];
     
     out = sum;
-    
 }//end-InnerProduct()
 
 void Samplers::BuildVandermondeMatrix(int k) { //m = 2^k
     
     complex<double> rootOfUnity;
     double pi;
-    int i, j, m, phi;
+    int i, index, j, m, phi;
     
     pi = NTL::to_double(ComputePi_RR());
     m = pow(2, k);
@@ -526,13 +560,14 @@ void Samplers::BuildVandermondeMatrix(int k) { //m = 2^k
     
     this->V.SetLength(phi); //Phi rows
     
-    for(i = 0; i < phi; i++) {
+    for(i = 0, index = 0; i < m, index < phi; i++, index++) {        
+        this->V[index].SetLength(m); //And m columns        
         
-        this->V[i].SetLength(m); //And m columns        
-        rootOfUnity = std::polar(1.0, (double)((2*pi*i)/(double)m));
+        if(GCD(i, m) == 1)
+            rootOfUnity = std::polar(1.0, (double)((2*pi*i)/(double)m));
         
         for(j = 0; j < m; j++)
-            this->V[i][j] = pow(rootOfUnity, j);        
+            this->V[index][j] = pow(rootOfUnity, j);
         
     }//end-for
     

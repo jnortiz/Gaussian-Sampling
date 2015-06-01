@@ -19,18 +19,20 @@ using namespace NTL;
 class Samplers {
 public:
     
-    Samplers();
+    Samplers(int k);
     virtual ~Samplers();
     
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
     Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma);
-    void InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b, int k);
+    void InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b);
+    void Norm(double& out, const Vec<int>& b);
+    void Isometry(Vec<int>& out, const Vec<int>& b);
     
     
 private:
     
     /* Attributes for sampling from lattice */
-    Vec< Vec< complex<double> > > V;
+    Vec< Vec< complex<double> > > V; //Vandermonde matrix
         
     /* Knuth-Yao attributes */
     Vec< Vec<int> > P;

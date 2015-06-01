@@ -79,7 +79,7 @@ int main(void) {
             }//end-if                
             
             Vec<int> ZigguratPoly, KnuthPoly;
-            Samplers sampler;
+            Samplers sampler(k);
             int nSamples = 1024; // #coefficients in the polynomial
             int nRectangles = 63; // Parameter of Ziggurat algorithm
             int omega = 107; // Parameter of Ziggurat algorithm
@@ -104,20 +104,23 @@ int main(void) {
             break;
         }
         case 3: {
-            Samplers sampler;
-
+            
             k = 3;//For testing
+            Samplers sampler(k);
+
             int m = 8;
 
-            int out;
+            double outD;
+            int out, q;
             Vec< int > a, b;
             a.SetLength(m);
             b.SetLength(m);
+            q = 4;
             
             for(int i = 0; i < m; i++) {
-                a[i] = NTL::RandomBnd(7);
-                b[i] = NTL::RandomBnd(7);
-            }
+                a[i] = NTL::RandomBnd(q);
+                b[i] = NTL::RandomBnd(q);
+            }//end-for
             
             cout << "Polynomial a: ";
             for(int i = 0; i < m; i++)
@@ -128,9 +131,13 @@ int main(void) {
                 cout << b[i] << " ";
             cout << endl;
             
-            sampler.InnerProduct(out, a, b, k);
-            
+            sampler.InnerProduct(out, a, b);            
             cout << "<a, b>: " << out << endl;
+            
+            sampler.Norm(outD, a);
+            cout << "Norm of a: " << outD << endl;
+            sampler.Norm(outD, b);
+            cout << "Norm of b: " << outD << endl;
             
             break;
         }
