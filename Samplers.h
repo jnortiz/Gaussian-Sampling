@@ -25,8 +25,8 @@ public:
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
     Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma);
     void InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b);
-    void Norm(double& out, const Vec<int>& b);
-    void Isometry(Vec<int>& out, const Vec<int>& b);
+    void Norm(complex<double>& out, const Vec<int>& b);
+//    void Isometry(Vec<int>& out, const Vec<int>& b);
     
     
 private:

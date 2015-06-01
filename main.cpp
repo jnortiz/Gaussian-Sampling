@@ -110,17 +110,19 @@ int main(void) {
 
             int m = 8;
 
-            double outD;
+            complex<double> outD;
             int out, q;
             Vec< int > a, b;
             a.SetLength(m);
             b.SetLength(m);
-            q = 4;
+            q = 3;
             
             for(int i = 0; i < m; i++) {
-                a[i] = NTL::RandomBnd(q);
-                b[i] = NTL::RandomBnd(q);
-            }//end-for
+                a[i] = RandomBnd(q);
+                b[(i+1)%m] = a[i];
+            }
+            a[m-1] = 0;
+            b[0] = 0;
             
             cout << "Polynomial a: ";
             for(int i = 0; i < m; i++)

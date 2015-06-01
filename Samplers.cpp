@@ -6,6 +6,8 @@
  */
 
 #include "Samplers.h"
+#include <NTL/ZZ_pXFactoring.h>
+#include <NTL/ZZ_pEX.h>
 #include <NTL/RR.h>
 #include <NTL/matrix.h>
 #include <sys/types.h>
@@ -34,7 +36,7 @@ Samplers::Samplers(int k) {
     
     close(fd);
           
-    NTL::SetSeed(to_ZZ(randint));
+    NTL::SetSeed(to_ZZ(randint));    
     
     //It's used for sampling from lattice
     this->BuildVandermondeMatrix(k);
@@ -462,14 +464,10 @@ void Samplers::BinaryExpansion(RR probability, int precision, int index) {
             
 }//end-BinaryExpansion()
 
-void Samplers::Isometry(Vec<int>& out, const Vec<int>& b) {
+void Samplers::Norm(complex<double>& out, const Vec<int>& b) {
     
-}
-
-void Samplers::Norm(double& out, const Vec<int>& b) {
-    
-    Vec<double> mult;
-    double sum;
+    Vec< complex<double> > mult;
+    complex<double> sum;
     int colsV, i, j, rowsV;
     
     colsV = this->V[0].length();
@@ -478,18 +476,15 @@ void Samplers::Norm(double& out, const Vec<int>& b) {
     
     /* Each row contains b(\psi_m^{i}) */
     for(i = 0; i < rowsV; i++) {
-        sum = 0.0;
+        sum = 0;
         for(j = 0; j < colsV; j++)
-            sum += this->V[i][j].real()*(double)b[j];
+            sum += this->V[i][j]*(complex<double>)b[j];
         mult[i] = sum;
     }//end-for
     
-    sum = 0.0;
-    for(i = 0; i < rowsV; i++) {
-        if(mult[i] < 0) //Absolute value
-            mult[i] = -mult[i];
-        sum += pow(mult[i], 2.0);
-    }//end-for
+    sum = 0; 
+    for(i = 0; i < rowsV; i++)
+        sum += pow(mult[i].real(), 2.0) + pow(mult[i].imag(), 2.0);        
     
     out = sqrt(sum);
     
@@ -503,7 +498,7 @@ void Samplers::InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b) {
     colsV = this->V[0].length();
     rowsV = this->V.length();
     
-    Vec< Vec< complex<double > > > transpV;
+    Vec< Vec< complex<double> > > transpV;
     Vec< Vec<int> > C;
     transpV.SetLength(colsV);
     C.SetLength(colsV);
@@ -601,20 +596,23 @@ void Samplers::ComplexMatrixMult(Vec< Vec< int > >& c, const Vec< Vec< complex<d
     
     if(colsA == rowsB) {
         
-        complex<double> sum = 0;
+        complex<double> sum;
         
         c.SetLength(rowsA);
         for(i = 0; i < rowsA; i++)
             c[i].SetLength(colsB);        
         
-        for (k = 0; k < rowsA; k++)
+        for (k = 0; k < rowsA; k++) {
           for (j = 0; j < colsB; j++) {
+            sum = 0;
             for (i = 0; i < rowsB; i++)
               sum = sum + a[k][i]*b[i][j];
 
-            c[k][j] = sum.real();
-            sum = 0;
+//            cout << sum.real() << " ";
+            c[k][j] = (int)sum.real();
           }//end-for
+//          cout << endl;
+        }
         
     }//end-if
     
