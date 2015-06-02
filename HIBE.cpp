@@ -384,6 +384,7 @@ int HIBE::IdealTrapGen() {
     if(this->FinalVerification(A, S)) {
         this->A = A;
         this->msk = S;
+        cout << S[0][0][0] << endl;
         return 1;
     } else
         return 0;

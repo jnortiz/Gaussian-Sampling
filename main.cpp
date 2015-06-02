@@ -107,31 +107,19 @@ int main(void) {
             
             k = 3;//For testing
             Samplers sampler(k);
-
-            int m = 8;
-
-            complex<double> outD;
-            int out, q;
-            Vec< int > a, b;
-            a.SetLength(m);
-            b.SetLength(m);
+            ZZX a, b;
+            ZZ out;
+            double outD;
+            int m, q;
+            
+            m = pow(2.0, k);
             q = 3;
             
-            for(int i = 0; i < m; i++) {
-                a[i] = RandomBnd(q);
-                b[(i+1)%m] = a[i];
-            }
-            a[m-1] = 0;
-            b[0] = 0;
+            sampler.PolyGenerator(a, m, q);
+            sampler.PolyGenerator(b, m, q);
             
-            cout << "Polynomial a: ";
-            for(int i = 0; i < m; i++)
-                cout << a[i] << " ";
-            cout << endl;
-            cout << "Polynomial b: ";            
-            for(int i = 0; i < m; i++)
-                cout << b[i] << " ";
-            cout << endl;
+            cout << "Polynomial a: " << a << endl;
+            cout << "Polynomial b: " << b << endl;            
             
             sampler.InnerProduct(out, a, b);            
             cout << "<a, b>: " << out << endl;
@@ -141,6 +129,12 @@ int main(void) {
             sampler.Norm(outD, b);
             cout << "Norm of b: " << outD << endl;
             
+            sampler.Isometry(a, a);
+            cout << "r(a): " << a << endl;
+
+            sampler.Isometry(b, b);
+            cout << "r(b): " << b << endl;
+            
             break;
         }
             
@@ -149,4 +143,3 @@ int main(void) {
     return 0;
     
 }
-

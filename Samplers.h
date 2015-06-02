@@ -9,6 +9,7 @@
 #include <NTL/RR.h>
 #include <NTL/mat_ZZ.h>
 #include <complex>
+#include <NTL/ZZX.h>
 
 #ifndef SAMPLERS_H
 #define	SAMPLERS_H
@@ -24,12 +25,14 @@ public:
     
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
     Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma);
-    void InnerProduct(int& out, const Vec<int>& a, const Vec<int>& b);
-    void Norm(complex<double>& out, const Vec<int>& b);
-//    void Isometry(Vec<int>& out, const Vec<int>& b);
-    
-    
+    void InnerProduct(ZZ& out, const ZZX& a, const ZZX& b);
+    void Norm(double& out, const ZZX& b);
+    void Isometry(ZZX& out, ZZX& b);
+    void PolyGenerator(ZZX& b, int length, int q);
+        
 private:
+    
+    ZZX phi;
     
     /* Attributes for sampling from lattice */
     Vec< Vec< complex<double> > > V; //Vandermonde matrix
@@ -62,7 +65,7 @@ private:
     void BuildVandermondeMatrix(int k);
     int EulerPhiPowerOfTwo(int k);
     void ConjugateOfMatrix(Vec< Vec< complex<double> > >& M);    
-    void ComplexMatrixMult(Vec< Vec< int > >& c, const Vec< Vec< complex<double> > >& a, const Vec< Vec< complex<double> > >& b);
+    void ComplexMatrixMult(Vec<ZZX>& c, const Vec< Vec< complex<double> > >& a, const Vec< Vec< complex<double> > >& b);
     
     void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
     
