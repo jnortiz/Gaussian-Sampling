@@ -471,17 +471,20 @@ void Samplers::BinaryExpansion(RR probability, int precision, int index) {
             
 }//end-BinaryExpansion()
 
-
+/* Generation of a length-degree polynomial modulo q */
 void Samplers::PolyGenerator(ZZX& b, int length, int q) {
     b.SetLength(length);
     for(int i = 0; i < length; i++)
         b[i] = NTL::RandomBnd(q);
-}
+}//end-PolyGenerator()
+
+/* Giving a polynomial g, out contains (b*x)%phi(x) */
 void Samplers::Isometry(ZZX& out, ZZX& b) {
     b = b % this->phi;
     out = NTL::MulByXMod(b, this->phi);
 }//end-Isometry()
 
+/* Norm of a polynomial */
 void Samplers::Norm(double& out, const ZZX& b) {
     
     Vec< complex<double> > mult;
@@ -560,7 +563,9 @@ void Samplers::InnerProduct(ZZ& out, const ZZX& a, const ZZX& b) {
     
 }//end-InnerProduct()
 
-void Samplers::BuildVandermondeMatrix(int k) { //m = 2^k
+/* The Vandermonde matrix computes the i-th m-th roots of unity 
+ * and their exponentiations */
+void Samplers::BuildVandermondeMatrix(int k) {
     
     complex<double> rootOfUnity;
     double pi;
@@ -570,11 +575,11 @@ void Samplers::BuildVandermondeMatrix(int k) { //m = 2^k
     m = pow(2, k);
     phi = this->EulerPhiPowerOfTwo(k);
     
-    this->V.SetLength(phi); //Phi rows
+    this->V.SetLength(phi);
     
     index = 0;
     for(i = 0; i < m; i++) {        
-        this->V[index].SetLength(m); //And m columns                
+        this->V[index].SetLength(m);
         if(GCD(i, m) == 1) {
             rootOfUnity = std::polar(1.0, (double)((2*pi*i)/(double)m));        
             for(j = 0; j < m; j++)
@@ -590,6 +595,7 @@ int Samplers::EulerPhiPowerOfTwo(int k) {
     return pow(2, k-1);    
 }//end-EulerPhiPowerOfTwo()
 
+/* It computer the conjugate of each element in the matrix */
 void Samplers::ConjugateOfMatrix(Vec< Vec< complex<double> > >& M) {
     
     int cols, rows;
@@ -602,7 +608,7 @@ void Samplers::ConjugateOfMatrix(Vec< Vec< complex<double> > >& M) {
     
 }//end-ConjugateOfMatrix()
 
-/* Matrix multiplication of complex numbers */
+/* Matrix multiplication of complex numbers generating an integer matrix */
 void Samplers::ComplexMatrixMult(Vec< ZZX >& c, const Vec< Vec< complex<double> > >& a, const Vec< Vec< complex<double> > >& b) {       
 
     int colsA, colsB, i, j, k, rowsA, rowsB;
