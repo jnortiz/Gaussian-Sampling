@@ -31,11 +31,10 @@ public:
     void PolyGenerator(ZZX& b, int length, int q);
         
 private:
-    
-    ZZX phi;
-    
+        
     /* Attributes for sampling from lattice */
     Vec< Vec< complex<double> > > V; //Vandermonde matrix
+    ZZX phi;// F = Q[X]/<phi>    
         
     /* Knuth-Yao attributes */
     Vec< Vec<int> > P;

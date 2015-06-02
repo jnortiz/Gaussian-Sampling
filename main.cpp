@@ -105,7 +105,6 @@ int main(void) {
         }
         case 3: {
             
-            k = 3;//For testing
             Samplers sampler(k);
             ZZX a, b;
             ZZ out;
@@ -113,7 +112,7 @@ int main(void) {
             int phi, q;
             
             phi = pow(2.0, k-1);
-            q = 3;
+            q = 3; // With no specific reason...
             
             sampler.PolyGenerator(a, phi, q);
             sampler.Isometry(b, a);
