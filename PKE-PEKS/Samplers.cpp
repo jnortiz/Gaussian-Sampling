@@ -477,6 +477,7 @@ void Samplers::PolyGenerator(ZZX& b, int length, int q) {
     for(int i = 0; i < length; i++)
         b[i] = NTL::RandomBnd(q);
 }
+
 void Samplers::Isometry(ZZX& out, ZZX& b) {
     b = b % this->phi;
     out = NTL::MulByXMod(b, this->phi);
