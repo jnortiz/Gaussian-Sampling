@@ -110,16 +110,16 @@ int main(void) {
             ZZX a, b;
             ZZ out;
             double outD;
-            int m, q;
+            int phi, q;
             
-            m = pow(2.0, k);
+            phi = pow(2.0, k-1);
             q = 3;
             
-            sampler.PolyGenerator(a, m, q);
-            sampler.PolyGenerator(b, m, q);
+            sampler.PolyGenerator(a, phi, q);
+            sampler.Isometry(b, a);
             
             cout << "Polynomial a: " << a << endl;
-            cout << "Polynomial b: " << b << endl;            
+            cout << "Polynomial b (r(a)): " << b << endl;            
             
             sampler.InnerProduct(out, a, b);            
             cout << "<a, b>: " << out << endl;
@@ -127,13 +127,7 @@ int main(void) {
             sampler.Norm(outD, a);
             cout << "Norm of a: " << outD << endl;
             sampler.Norm(outD, b);
-            cout << "Norm of b: " << outD << endl;
-            
-            sampler.Isometry(a, a);
-            cout << "r(a): " << a << endl;
-
-            sampler.Isometry(b, b);
-            cout << "r(b): " << b << endl;
+            cout << "Norm of b: " << outD << endl;            
             
             break;
         }

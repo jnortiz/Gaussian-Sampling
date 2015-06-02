@@ -41,7 +41,7 @@ Samplers::Samplers(int k) {
     
     int phi;
     phi = this->EulerPhiPowerOfTwo(k); //It computes \phi(m), with m = 2^k
-    this->phi.SetLength(phi);
+    this->phi.SetLength(phi+1);
     SetCoeff(this->phi, 0, 1);
     SetCoeff(this->phi, phi, 1);
     
@@ -480,8 +480,7 @@ void Samplers::PolyGenerator(ZZX& b, int length, int q) {
 
 /* Giving a polynomial g, out contains (b*x)%phi(x) */
 void Samplers::Isometry(ZZX& out, ZZX& b) {
-    b = b % this->phi;
-    out = NTL::MulByXMod(b, this->phi);
+    MulByXMod(out, b, this->phi);
 }//end-Isometry()
 
 /* Norm of a polynomial */
@@ -571,7 +570,7 @@ void Samplers::BuildVandermondeMatrix(int k) {
     double pi;
     int i, index, j, m, phi;
     
-    pi = NTL::to_double(ComputePi_RR());
+    pi = to_double(ComputePi_RR());
     m = pow(2, k);
     phi = this->EulerPhiPowerOfTwo(k);
     
@@ -579,10 +578,10 @@ void Samplers::BuildVandermondeMatrix(int k) {
     
     index = 0;
     for(i = 0; i < m; i++) {        
-        this->V[index].SetLength(m);
+        this->V[index].SetLength(phi);
         if(GCD(i, m) == 1) {
             rootOfUnity = std::polar(1.0, (double)((2*pi*i)/(double)m));        
-            for(j = 0; j < m; j++)
+            for(j = 0; j < phi; j++)
                 this->V[index][j] = pow(rootOfUnity, j);
             index++;
         }//end-if        
@@ -592,7 +591,7 @@ void Samplers::BuildVandermondeMatrix(int k) {
 
 /* Computation of Euler's phi function for m = 2^k, p = 2 */
 int Samplers::EulerPhiPowerOfTwo(int k) {
-    return pow(2, k-1);    
+    return pow(2.0, k-1);    
 }//end-EulerPhiPowerOfTwo()
 
 /* It computer the conjugate of each element in the matrix */
@@ -632,7 +631,7 @@ void Samplers::ComplexMatrixMult(Vec< ZZX >& c, const Vec< Vec< complex<double> 
               sum = sum + a[k][i]*b[i][j];
             c[k][j] = to_ZZ(sum.real());
           }//end-for
-        }
+        }//end-for
         
     }//end-if
     

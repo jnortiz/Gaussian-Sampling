@@ -36,7 +36,7 @@ HIBE::HIBE(double q, int m1, int m2, int k, int sigma) {
     ZZ_p::init(conv<ZZ>(q)); // Coefficients modulo
 
     ZZ_pX f;
-    f.SetLength(this->n);
+    f.SetLength((this->n)+1);
     SetCoeff(f, 0, 1);
     SetCoeff(f, this->n, 1);
     this->f = f;
@@ -384,7 +384,6 @@ int HIBE::IdealTrapGen() {
     if(this->FinalVerification(A, S)) {
         this->A = A;
         this->msk = S;
-        cout << S[0][0][0] << endl;
         return 1;
     } else
         return 0;
