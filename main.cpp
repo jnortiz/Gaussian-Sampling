@@ -20,49 +20,52 @@ static timestamp_t get_timestamp() {
 
 int main(void) {
         
-    int action = 3;
-    int k = 8; // n = 2^k is the degree of polynomials in R and R_0
+    int action = 2;
     
+    int k;
+    double lambda;
+    int q, m1, m2, r, sigma;
+
+    k = 8; // n = 2^k is the degree of polynomials in R and R_0
+    q = 587; //q must be prime and congruent to 3 mod 8
+    m1 = 13;
+    m2 = 150; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+
+    r = ceil((double)(1 + (log(q)/log(3))));
+    sigma = 1;
+
+    lambda = ceil(1 + (log(q)/log(2)));
+
+    if(q % 8 != 3) {
+        cout << "q must be congruent to 3 mod 8.\n";
+        return -1;
+    }
+
+    if(m1 < sigma || m1 < r) {
+        cout << "m1 must be greater or equal to sigma and r.\n";
+        return -1;        
+    }
+
+    if(m1 < lambda) {
+        cout << "m1 must be greater or equal to lambda.\n";
+        return -1;
+    }
+
+    if(m2 < lambda) {
+        cout << "m2 must be greater or equal to lambda.\n";
+        return -1;
+    }
+
+    if(m2 < lambda*m1) {
+        cout << "m2 must be greater or equal to lambda times m1.\n";
+        return -1;
+    }
+
+    HIBE hibe((double)q, m1, m2, k, sigma);
+            
     switch(action) {
         case 1: { // Setup algorithm from HIBE scheme
-            double lambda;
-            int q, m1, m2, r, sigma;
 
-            q = 587; //q must be prime and congruent to 3 mod 8
-            m1 = 13;
-            m2 = 150; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
-
-            r = ceil((double)(1 + (log(q)/log(3))));
-            sigma = 1;
-
-            lambda = ceil(1 + (log(q)/log(2)));
-
-            if(q % 8 != 3) {
-                cout << "q must be congruent to 3 mod 8.\n";
-                return -1;
-            }
-
-            if(m1 < sigma || m1 < r) {
-                cout << "m1 must be greater or equal to sigma and r.\n";
-                return -1;        
-            }
-
-            if(m1 < lambda) {
-                cout << "m1 must be greater or equal to lambda.\n";
-                return -1;
-            }
-
-            if(m2 < lambda) {
-                cout << "m2 must be greater or equal to lambda.\n";
-                return -1;
-            }
-
-            if(m2 < lambda*m1) {
-                cout << "m2 must be greater or equal to lambda times m1.\n";
-                return -1;
-            }
-
-            HIBE hibe((double)q, m1, m2, k, sigma);
             hibe.Setup(10); // Setup algorithm with h = 10            
             
             break;
@@ -105,16 +108,18 @@ int main(void) {
         }
         case 3: {
             
+            k = 5;
             Samplers sampler(k);
             ZZX a, b;
             ZZ out;
             double outD;
-            int phi, q;
+            int m, phi, q;
             
             phi = pow(2.0, k-1);
+            m = phi*2;
             q = 3; // With no specific reason...
             
-            sampler.PolyGenerator(a, phi, q);
+            sampler.PolyGenerator(a, m, q);
             sampler.Isometry(b, a);
             
             cout << "Polynomial a: " << a << endl;
@@ -130,6 +135,12 @@ int main(void) {
             
             break;
         }
+        case 4:
+            Vec<ZZX> T;   
+            hibe.Setup(10); // Setup algorithm with h = 10            
+            hibe.PrepareMSK(T);
+            hibe.PrepareKey(T);
+            break;
             
     }//end-switch
     

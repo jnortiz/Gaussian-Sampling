@@ -78,7 +78,7 @@ void HIBE::Setup(int h) {
 //    this->PrintMatrixZZ_pX("Matrix A_prime", this->A_prime);
 //    this->PrintVectorZZ_pX("Vector B", this->B);
 //    cout << "\n/** Polynomial u **/\n" << this->u << endl;    
-    this->PrintMatrixZZX("Master Secret Key (msk)", this->msk);
+//    this->PrintMatrixZZX("Master Secret Key (msk)", this->msk);
     
     cout << "[*] Setup status: Pass!" << endl;
     
@@ -611,3 +611,63 @@ int HIBE::FinalVerification(const Vec<ZZ_pX>& A, const Vec< Vec<ZZX> >& S) {
     return 0;
     
 }//end-FinalVerification()
+
+void HIBE::PrepareMSK(Vec<ZZX>& T) {
+    
+    ZZX Phi;
+    int colsMSK, phi;
+    
+    colsMSK = this->msk[0].length();
+    phi = pow(2, (this->k)-1);
+    Phi.SetLength(phi+1);
+    T.SetLength(colsMSK);
+    
+    SetCoeff(Phi, phi, 1);
+    SetCoeff(Phi, 0, 1);    
+    
+    cout << "First line (before): "  << endl;
+    cout << this->msk[0] << endl;
+    
+    cout << "First line (after): " << endl;    
+    for(int i = 0; i < colsMSK; i++) {
+        T[i].SetLength(phi);
+        T[i] = this->msk[0][i] % Phi;
+        cout << T[i] << " ";
+    }
+    
+    cout << "\nIsometry (after): " << endl;    
+    for(int i = 0; i < colsMSK; i++) {
+        MulByXMod(T[i], T[i], Phi); 
+        cout << T[i] << " ";
+    }
+
+    cout << "\nSecond line (after): " << endl;
+    for(int i = 0; i < colsMSK; i++) {
+        T[i] = this->msk[1][i] % Phi; 
+        cout << T[i] << " ";
+    }
+    cout << endl;
+    
+}//end-PrepareMSK()
+
+void HIBE::PrepareKey(Vec<ZZX>& B) {
+    
+    ZZ_pX Phi;
+    int lengthA, phi;
+    
+    lengthA = this->A.length();
+    phi = pow(2, (this->k)-1);
+    Phi.SetLength(phi+1);
+    B.SetLength(lengthA);
+    
+    SetCoeff(Phi, phi, 1);
+    SetCoeff(Phi, 0, 1);    
+    
+    cout << "First line (before): "  << endl;
+    cout << this->A[0] << endl;
+    cout << (this->A[0] % Phi) << endl;
+    cout << NTL::MulByXMod(this->A[0] % Phi, Phi) << endl;
+    cout << (this->A[1]) << endl;
+    cout << (this->A[1] % Phi) << endl;    
+    
+}//end-PrepareMSK()

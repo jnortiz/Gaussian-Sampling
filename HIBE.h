@@ -25,6 +25,10 @@ public:
     
     /* HIBE algorithms */
     void Setup(int h);
+
+    void PrepareMSK(Vec<ZZX>& T);
+    void PrepareKey(Vec<ZZX>& B);
+    
 // Ongoind:    
 //    void KeyDerive();
 // TODO:    

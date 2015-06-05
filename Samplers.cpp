@@ -402,13 +402,10 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
             
             d = d - this->P[row][col];
             
-            // Enable turns one just in case d is equal to -1
-            enable = (unsigned)d;
-            for(i = 0; i < (sizeof(int)*8)-1; i++) {
-              aux = enable >> 1;
-              enable = enable & aux;
-            }//end-for
-            
+            enable = (unsigned)(d + 1); // Enable = 0 iff d = -1
+            // Enable turns 1 iff enable was 0
+            enable = 1 ^ ((enable | -enable) >> 31) & 1;
+             
             /* When enable&!hit becomes 1, "col" is added to "S";
              * e.g. enable = 1 and hit = 0 */
             S += Select(invalidSample, col, (enable & !hit));
@@ -480,6 +477,7 @@ void Samplers::PolyGenerator(ZZX& b, int length, int q) {
 
 /* Giving a polynomial g, out contains (b*x)%phi(x) */
 void Samplers::Isometry(ZZX& out, ZZX& b) {
+    b %= this->phi;
     MulByXMod(out, b, this->phi);
 }//end-Isometry()
 
