@@ -402,7 +402,7 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
             
             d = d - this->P[row][col];
             
-            enable = (unsigned)(d + 1); // Enable = 0 iff d = -1
+            enable = (unsigned)(d + 1); // Enable turns 0 iff d = -1
             // Enable turns 1 iff enable was 0
             enable = 1 ^ ((enable | -enable) >> 31) & 1;
              
