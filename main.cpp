@@ -83,7 +83,7 @@ int main(void) {
             
             Vec<int> ZigguratPoly, KnuthPoly;
             Samplers sampler(k);
-            int nSamples = 1024; // #coefficients in the polynomial
+            int nSamples = 8194; // #coefficients in the polynomial
             int nRectangles = 63; // Parameter of Ziggurat algorithm
             int omega = 107; // Parameter of Ziggurat algorithm
             int precision = 107;
@@ -95,14 +95,14 @@ int main(void) {
             ts_end = get_timestamp();            
                         
             cout << "[!] Ziggurat running time for " << nSamples << " samples: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-            cout << ZigguratPoly << endl;
+//            cout << ZigguratPoly << endl;
             
             ts_start = get_timestamp();                        
             KnuthPoly = sampler.PolyGeneratorKnuthYao(nSamples, precision, tailcut, sigma); // Coefficients, precision, tailcut, and sigma
             ts_end = get_timestamp();            
             
             cout << "[!] Knuth-Yao running time for " << nSamples << " samples: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-            cout << KnuthPoly << endl;
+//            cout << KnuthPoly << endl;
             
             break;
         }

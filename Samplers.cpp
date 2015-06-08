@@ -86,46 +86,26 @@ int Select(int a, int b, unsigned bit) {
 
 /* Testing if x = 0 */
 int isZero(int x) {
-    
-    int aux, i, zero;
-    zero = -x;
-    
-    for(i = 0; i < (sizeof(int)*8)-1; i++) {
-      aux = zero >> 1;
-      zero = zero | aux;
-    }//end-for    
-    
-    return zero;
-    
+    unsigned zero;
+    zero = x;
+    zero = 1 ^ ((zero | -zero) >> 31) & 1;
+    return zero;    
 }//end-isZero()
 
 /* Testing if x is less than y */
-unsigned lessThan(int x, int y) {
-    
-    unsigned less;
-    
-    less = x - y;
-    less >>= sizeof(int)*8-1;
-    
-    return less;    
-    
+unsigned lessThan(int x, int y) {    
+    unsigned less;    
+    less = x-y;
+    less >>= sizeof(int)*8-1;    
+    return less;        
 }//end-lessThan()
 
 /* Testing if x = y */
-unsigned isEqual(int x, int y) {
-    
-    unsigned equal;
-    int aux, j;
-    
-    equal = (x-y)-1;
-    
-    for(j = 0; j < sizeof(int)*8-1; j++) {
-        aux = equal >> 1;            
-        equal = equal & aux;
-    }//end-for
-    
-    return equal;
-    
+unsigned isEqual(int x, int y) {    
+    unsigned equal;    
+    equal = x-y; // "equal" turns 0 if x = y    
+    equal = 1 ^ ((equal | -equal) >> 31) & 1; // "equal" turns 1 iff enable was 0
+    return equal;    
 }//end-isEqual()
 
 /* It produces a n-dimension polynomial with coefficient sampled from a 
@@ -378,8 +358,8 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
 /* Knuth-Yao algorithm to obtain a sample from the discrete Gaussian */
 int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
     
-    int bound, col, d, i, invalidSample, pNumRows, pNumCols, r, searchRange, S;
-    unsigned aux, enable, hit;
+    int bound, col, d, invalidSample, pNumRows, pNumCols, r, searchRange, S;
+    unsigned enable, hit;
     
     bound = tailcut*to_int(sigma);
     d = 0; //Distance
@@ -402,9 +382,8 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
             
             d = d - this->P[row][col];
             
-            enable = (unsigned)(d + 1); // Enable turns 0 iff d = -1
-            // Enable turns 1 iff enable was 0
-            enable = 1 ^ ((enable | -enable) >> 31) & 1;
+            enable = (unsigned)(d + 1); // "enable" turns 0 iff d = -1
+            enable = 1 ^ ((enable | -enable) >> 31) & 1; // "enable" turns 1 iff "enable" was 0
              
             /* When enable&!hit becomes 1, "col" is added to "S";
              * e.g. enable = 1 and hit = 0 */
