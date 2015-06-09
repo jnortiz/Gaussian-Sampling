@@ -25,16 +25,14 @@ public:
     
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
     Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma);
-    void InnerProduct(ZZ& out, const ZZX& a, const ZZX& b);
-    void Norm(double& out, const ZZX& b);
-    void Isometry(ZZX& out, ZZX& b);
     void PolyGenerator(ZZX& b, int length, int q);
+    void FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, const Vec<ZZ_pX>& B, int k);
         
 private:
         
     /* Attributes for sampling from lattice */
     Vec< Vec< complex<double> > > V; //Vandermonde matrix
-    ZZX phi;// F = Q[X]/<phi>    
+    ZZX phi;// Polynomial F = Q[X]/<phi>    
         
     /* Knuth-Yao attributes */
     Vec< Vec<int> > P;
@@ -65,8 +63,12 @@ private:
     int EulerPhiPowerOfTwo(int k);
     void ConjugateOfMatrix(Vec< Vec< complex<double> > >& M);    
     void ComplexMatrixMult(Vec<ZZX>& c, const Vec< Vec< complex<double> > >& a, const Vec< Vec< complex<double> > >& b);
+    ZZ InnerProduct(const ZZX& a, const ZZX& b);
+    double Norm(const ZZX& b);
+    ZZX Isometry(ZZX& b);
     
     void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
+    ZZX Mult(ZZX V, double c, int m);
     
 };
 

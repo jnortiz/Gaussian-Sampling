@@ -26,10 +26,7 @@ public:
     /* HIBE algorithms */
     void Setup(int h);
 
-    void PrepareMSK(Vec<ZZX>& T);
-    void PrepareKey(Vec<ZZX>& B);
-    
-// Ongoind:    
+// Ongoing:    
 //    void KeyDerive();
 // TODO:    
 //    void Encrypt();
@@ -49,6 +46,8 @@ public:
     Vec<Vec<ZZ_pX> > GetA_prime() const { return A_prime; }
     Vec<ZZ_pX> GetB() const { return B; }
     ZZ_pX GetU() const { return u; }
+    Samplers* GetSampler() const { return sampler; }
+    
     
 private:
     /* Global parameters */

@@ -22,10 +22,11 @@ int main(void) {
         
     int action = 2;
     
-    int k;
+    int h, k;
     double lambda;
     int q, m1, m2, r, sigma;
 
+    h = 10;
     k = 8; // n = 2^k is the degree of polynomials in R and R_0
     q = 587; //q must be prime and congruent to 3 mod 8
     m1 = 13;
@@ -62,16 +63,9 @@ int main(void) {
     }
 
     HIBE hibe((double)q, m1, m2, k, sigma);
-            
+    
     switch(action) {
-        case 1: { // Setup algorithm from HIBE scheme
-
-            hibe.Setup(10); // Setup algorithm with h = 10            
-            
-            break;
-        }
-        
-        case 2: {
+        case 1: {
             /* Parameter set from (Roy et al., 2013). That depends on the cryptographic system requirements */
             RR sigma = to_RR(3.195); // Standard deviation
             int tailcut = 13;
@@ -82,7 +76,6 @@ int main(void) {
             }//end-if                
             
             Vec<int> ZigguratPoly, KnuthPoly;
-            Samplers sampler(k);
             int nSamples = 8194; // #coefficients in the polynomial
             int nRectangles = 63; // Parameter of Ziggurat algorithm
             int omega = 107; // Parameter of Ziggurat algorithm
@@ -91,57 +84,41 @@ int main(void) {
             timestamp_t ts_start, ts_end;
             
             ts_start = get_timestamp();            
-            ZigguratPoly = sampler.PolyGeneratorZiggurat(nSamples, nRectangles, sigma, omega, precision, tailcut); // Coefficients, rectangles, sigma, omega and precision
+            ZigguratPoly = hibe.GetSampler()->PolyGeneratorZiggurat(nSamples, nRectangles, sigma, omega, precision, tailcut); // Coefficients, rectangles, sigma, omega and precision
             ts_end = get_timestamp();            
                         
             cout << "[!] Ziggurat running time for " << nSamples << " samples: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-//            cout << ZigguratPoly << endl;
+            cout << ZigguratPoly << endl;
             
             ts_start = get_timestamp();                        
-            KnuthPoly = sampler.PolyGeneratorKnuthYao(nSamples, precision, tailcut, sigma); // Coefficients, precision, tailcut, and sigma
+            KnuthPoly = hibe.GetSampler()->PolyGeneratorKnuthYao(nSamples, precision, tailcut, sigma); // Coefficients, precision, tailcut, and sigma
             ts_end = get_timestamp();            
             
             cout << "[!] Knuth-Yao running time for " << nSamples << " samples: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-//            cout << KnuthPoly << endl;
+            cout << KnuthPoly << endl;
             
             break;
         }
-        case 3: {
+        case 2: {            
             
-            k = 5;
-            Samplers sampler(k);
-            ZZX a, b;
-            ZZ out;
-            double outD;
-            int m, phi, q;
+            hibe.Setup(h); // Setup algorithm with h = 10
             
-            phi = pow(2.0, k-1);
-            m = phi*2;
-            q = 3; // With no specific reason...
+            Vec<ZZX> BTilde;
+            Vec<ZZ> C;
+            Vec<double> D;
             
-            sampler.PolyGenerator(a, m, q);
-            sampler.Isometry(b, a);
+            hibe.GetSampler()->FasterIsometricGSO(BTilde, C, D, hibe.GetA(), k);
             
-            cout << "Polynomial a: " << a << endl;
-            cout << "Polynomial b (r(a)): " << b << endl;            
+            cout << "/* Basis A */" << endl;
+            cout << hibe.GetA() << endl;
             
-            sampler.InnerProduct(out, a, b);            
-            cout << "<a, b>: " << out << endl;
-            
-            sampler.Norm(outD, a);
-            cout << "Norm of a: " << outD << endl;
-            sampler.Norm(outD, b);
-            cout << "Norm of b: " << outD << endl;            
+            cout << "/* Gram-Schmidt reduced basis */" << endl;
+            cout << BTilde << endl;
             
             break;
         }
-        case 4:
-            Vec<ZZX> T;   
-            hibe.Setup(10); // Setup algorithm with h = 10            
-            hibe.PrepareMSK(T);
-            hibe.PrepareKey(T);
-            break;
-            
+        default:
+            break;            
     }//end-switch
     
     return 0;

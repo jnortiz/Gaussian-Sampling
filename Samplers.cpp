@@ -455,13 +455,13 @@ void Samplers::PolyGenerator(ZZX& b, int length, int q) {
 }//end-PolyGenerator()
 
 /* Giving a polynomial g, out contains (b*x)%phi(x) */
-void Samplers::Isometry(ZZX& out, ZZX& b) {
+ZZX Samplers::Isometry(ZZX& b) {
     b %= this->phi;
-    MulByXMod(out, b, this->phi);
+    return MulByXMod(b, this->phi);
 }//end-Isometry()
 
 /* Norm of a polynomial */
-void Samplers::Norm(double& out, const ZZX& b) {
+double Samplers::Norm(const ZZX& b) {
     
     Vec< complex<double> > mult;
     complex<double> sum;
@@ -485,12 +485,12 @@ void Samplers::Norm(double& out, const ZZX& b) {
     for(i = 0; i < rowsV; i++)
         sum += pow(mult[i].real(), 2.0) + pow(mult[i].imag(), 2.0);        
     
-    out = sqrt(sum).real();
+    return sqrt(sum).real();
     
 }//end-Norm()
 
 /* Computation of the inner product as matrix multiplication */
-void Samplers::InnerProduct(ZZ& out, const ZZX& a, const ZZX& b) {
+ZZ Samplers::InnerProduct(const ZZX& a, const ZZX& b) {
     // <a, b> = a^{T} * \bar{V^{T}} * V * b
     
     int colsV, i, j, rowsV;
@@ -535,7 +535,7 @@ void Samplers::InnerProduct(ZZ& out, const ZZX& a, const ZZX& b) {
     for(i = 0; i < colsV; i++)
         sum += D[i]*b[i];
     
-    out = sum;
+    return sum;
     
 }//end-InnerProduct()
 
@@ -624,3 +624,46 @@ void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
     }//end-for
     
 }//end-PrintVectorZZX()
+
+/* Gram-Schmidt reduced basis generation */
+void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, const Vec<ZZ_pX>& B, int k) {
+    
+    ZZX B1, V, V1;
+    double div;
+    int i, m, phi;
+    
+    m = B.length();
+    phi = this->EulerPhiPowerOfTwo(k);
+    
+    B1.SetLength(phi);
+    V.SetLength(phi);
+    V1.SetLength(phi);
+    C.SetLength(m);
+    D.SetLength(m);
+    
+    BTilde.SetLength(m);
+    for(i = 0; i < BTilde.length(); i++)
+        BTilde[i].SetLength(phi);
+    
+    B1 = to_ZZX(B[0]) % this->phi;
+    
+    BTilde[0] = B1; V = B1; V1 = B1;
+    
+    C[0] = this->InnerProduct(V1, this->Isometry(BTilde[0]));
+    D[0] = pow(this->Norm(B1), 2.0);
+    
+    for(i = 0; i < m-1; i++) {
+        div = to_double(C[i])/D[i];
+        BTilde[i+1] = this->Isometry(BTilde[i]) - this->Mult(V, div, phi);
+        V = V - this->Mult(this->Isometry(BTilde[i]), div, phi);
+        C[i+1] = this->InnerProduct(V1, this->Isometry(BTilde[i+1]));
+        D[i+1] = D[i] - (pow(to_double(C[i]), 2.0))/D[i];
+    }//end-for
+    
+}//end-FasterIsometricGSO()
+
+ZZX Samplers::Mult(ZZX V, double c, int phi) {
+    for(int i = 0; i < phi; i++)
+        V[i] = to_ZZ(to_double(V[i]) * c);
+    return V;
+}//end-Mult()
