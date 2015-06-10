@@ -112,7 +112,7 @@ int main(void) {
             cout << "/* Basis A */" << endl;
             cout << hibe.GetA() << endl;
             
-            cout << "/* Gram-Schmidt reduced basis */" << endl;
+            cout << "\n/* Gram-Schmidt reduced basis */" << endl;
             cout << BTilde << endl;
             
             break;

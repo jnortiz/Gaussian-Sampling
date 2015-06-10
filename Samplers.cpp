@@ -625,11 +625,47 @@ void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
     
 }//end-PrintVectorZZX()
 
+/* Sampling a lattice point from a Gaussian centered in zero */
+ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut) {
+    
+    ZZX c, mult;
+    RR sigmaI;
+    ZZ zero;
+    double d, norm;
+    int i, m, sample;
+    
+    m = B.length();
+    c.SetLength(m);
+    zero = to_ZZ(0);
+   
+    for(i = 0; i < m; i++) //Centered in zero
+        c[i] = zero;
+    
+    for(i = m-1; i >= 0; i--) {
+        norm = this->Norm(BTilde[i]);
+        d = to_double(this->InnerProduct(c, BTilde[i]))/(pow(norm, 2.0));
+        sigmaI = sigma/to_RR(norm);
+        sample = this->KnuthYao(precision, tailcut, sigmaI);
+        sample = (int)(sample + d);
+        mul(mult, B[i], (long)(sample));        
+        sub(c, c, mult);
+    }//end-for
+    
+    for(i = 0; i < m; i++)
+        c[i] = -c[i];
+    
+    return c;
+    
+}//end-GaussianSamplerFromLattice()
+
 /* Gram-Schmidt reduced basis generation */
 void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, const Vec<ZZ_pX>& B, int k) {
     
-    ZZX B1, V, V1;
-    double div;
+    ZZX isometry;
+    ZZX B1; // B[0] reduced modulo Phi_m(x)
+    ZZX V; // Updated at each iteration
+    ZZX V1; // It stores the first value of V
+    double div, Cdouble;
     int i, m, phi;
     
     m = B.length();
@@ -649,15 +685,20 @@ void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, 
     
     BTilde[0] = B1; V = B1; V1 = B1;
     
-    C[0] = this->InnerProduct(V1, this->Isometry(BTilde[0]));
+    C[0] = this->InnerProduct(V1, this->Isometry(B1));
     D[0] = pow(this->Norm(B1), 2.0);
     
     for(i = 0; i < m-1; i++) {
-        div = to_double(C[i])/D[i];
-        BTilde[i+1] = this->Isometry(BTilde[i]) - this->Mult(V, div, phi);
-        V = V - this->Mult(this->Isometry(BTilde[i]), div, phi);
+        
+        Cdouble = to_double(C[i]);
+        div = Cdouble/D[i];
+        isometry = this->Isometry(BTilde[i]);
+        
+        BTilde[i+1] = isometry - this->Mult(V, div, phi); // V_k*C_k/D_k
+        V = V - this->Mult(isometry, div, phi);
         C[i+1] = this->InnerProduct(V1, this->Isometry(BTilde[i+1]));
-        D[i+1] = D[i] - (pow(to_double(C[i]), 2.0))/D[i];
+        D[i+1] = D[i] - div*Cdouble;
+        
     }//end-for
     
 }//end-FasterIsometricGSO()
