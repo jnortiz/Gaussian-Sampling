@@ -20,7 +20,7 @@ using namespace NTL;
 
 class HIBE {
 public:
-    HIBE(double q, int m1, int m2, int k, int sigma);
+    HIBE(double q, int m1, int m2, int k);
     virtual ~HIBE();    
     
     /* HIBE algorithms */
@@ -53,7 +53,6 @@ private:
     /* Global parameters */
     double q;
     double r;
-    int sigma;
     double lambda;
     long m;
     long n;

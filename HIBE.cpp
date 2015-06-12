@@ -21,7 +21,7 @@
 using namespace std;
 using namespace NTL;
 
-HIBE::HIBE(double q, int m1, int m2, int k, int sigma) {
+HIBE::HIBE(double q, int m1, int m2, int k) {
         
     this->lambda = ceil(1 + (log(q)/log(2)));    
     this->m = m1 + m2;
@@ -31,7 +31,6 @@ HIBE::HIBE(double q, int m1, int m2, int k, int sigma) {
     this->m2 = m2;
     this->k = k;    
     this->r = ceil((double)(1 + (log(q)/log(3))));
-    this->sigma = sigma;
     
     ZZ_p::init(conv<ZZ>(q)); // Coefficients modulo
 
@@ -44,7 +43,9 @@ HIBE::HIBE(double q, int m1, int m2, int k, int sigma) {
     this->sampler = new Samplers(k);
 }
 
-HIBE::~HIBE() {};
+HIBE::~HIBE() {
+    delete(this->sampler);
+}
 
 void HIBE::Setup(int h) {
     

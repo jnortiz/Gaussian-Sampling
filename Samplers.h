@@ -24,10 +24,12 @@ public:
     virtual ~Samplers();
     
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
-    Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma);
+    Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma, RR c);
     void PolyGenerator(ZZX& b, int length, int q);
-    ZZX GaussianSamplerFromLattice(const Vec<ZZX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut);
+    ZZX GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX c, int k);
     void FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, const Vec<ZZ_pX>& B, int k);
+    void DZCreatePartition(int m, RR sigma, int n, int tail);
+    RR CoverageAreaZiggurat();
         
 private:
         
@@ -49,15 +51,15 @@ private:
     int KnuthYao(int precision, int tailcut, RR sigma);
     
     /* Auxiliary functions of Ziggurat algorithm */
-    void DZCreatePartition(int m, RR sigma, int n, int tail);
-    RR DZRecursion(int m, int c, RR sigma);
+//    void DZCreatePartition(int m, RR sigma, int n, int tail);
+    RR DZRecursion(Vec<RR>& X, Vec<RR>& Y, int m, int tail, RR c, RR sigma);
     RR Rho(RR sigma, RR x);
     ZZ sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i);
     
     /* Auxiliary functions of Knuth-Yao algorithm */
-    RR Probability(RR x, RR sigma);
-    void BinaryExpansion(RR probability, int precision, int index);
-    void BuildProbabilityMatrix(int precision, int tailcut, RR sigma);
+    RR Probability(RR x, RR sigma, RR c);
+    void BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precision, int index);
+    void BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c);
 
     /* Auxiliary functions of lattice sampler */
     void BuildVandermondeMatrix(int k);
@@ -70,6 +72,7 @@ private:
     
     void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
     ZZX Mult(ZZX V, double c, int m);
+//    RR CoverageAreaZiggurat();
     
 };
 

@@ -62,14 +62,14 @@ RR Samplers::Rho(RR sigma, RR x) {
     
 }//end-Rho()
 
-RR Samplers::Probability(RR x, RR sigma) {
+RR Samplers::Probability(RR x, RR sigma, RR c) {
     RR S = sigma*sqrt(2*ComputePi_RR());
     RR overS = 1/S;
     
     if(x == to_RR(0))
         return overS;
     
-    return overS*exp(-(power(x/sigma, 2))/2.0);
+    return overS*exp(-(power((x-c)/sigma, 2))/2.0);
     
 }//end-Probability()
 
@@ -151,13 +151,15 @@ Vec<int> Samplers::PolyGeneratorZiggurat(int dimension, int m, RR sigma, int ome
  * It does not avoid Rho function computation */
 int Samplers::Ziggurat(int m, RR sigma, int omega) {
         
-    ZZ powerOmega, yPrime, yBar;
-    int bit, curve, i, invalidSample, zero, s, S, x;
+    // See below to explanation about this comments
+    ZZ powerOmega;
+    int curve;
+    int bit, i, invalidSample, zero, s, S, x;
     unsigned less, lessEqual, equal, greater;
     long b;
         
     powerOmega = power2_ZZ(omega); // 2^{\omega}
-    invalidSample = 14*to_int(sigma);
+    invalidSample = 14*to_int(sigma); // Value out of the range
     bit = 0;
     
     /* Estimated number of iterations required to obtain all requested samples 
@@ -167,9 +169,6 @@ int Samplers::Ziggurat(int m, RR sigma, int omega) {
         s = 1 - 2*RandomBits_long(1); // Sample a random signal s
         x = RandomBnd(this->X_ZZ[i] + 1); // Sample a x value between 0 and floor(x_i)
         b = RandomBits_long(1);
-        yPrime = RandomBnd(powerOmega - 1);
-        yBar = yPrime * (this->Y_ZZ[i-1] - this->Y_ZZ[i]);
-        curve = to_int(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i]));
         
         zero = isZero(x);               
         greater = (zero+1)%2; //Certainly x > 0 if it's not zero        
@@ -184,11 +183,13 @@ int Samplers::Ziggurat(int m, RR sigma, int omega) {
         /* Second case: If x = 0, define s*x as a sample with probability of 50% */
         bit = (bit | (zero & (b+1)%2));
                         
+        // Suppression of 3rd case
+        curve = to_int(to_RR(powerOmega) * (Rho(sigma, to_RR(x)) - this->Y[i]));
         less = lessThan(x, curve);
         equal = isEqual(x, curve);
         
-        /* Third case: the sampled x is below to the curve */
-        bit = (bit | (less | equal));
+        // Third case: the sampled x is below to the curve and in the left rectangle
+        bit = (bit | (less | equal)); 
         
         /* If the bit becomes 1, the valid sample s*x is assigned to S. 
          * The bit is an OR operation between the last and the current bit value. 
@@ -210,63 +211,93 @@ void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail) {
      * n: bit precision
      */
     
+    /* Output precision setup */
+    RR::SetOutputPrecision((long)n);
+    
     // The approximation error must be less than 2^{-n}
     RR statDistance = power2_RR(-((long)n));
     
-    RR tailcut, y0;
-    int c;
-    bool validPartition = 0;
+    Vec<RR> bestX, X, Y;
+    RR bestdiff, c, cc, cl, cu, lastdiff, mRR, tailcut, y0;
+    int i;
     
-    this->X.SetLength(m + 1);
-    this->Y.SetLength(m + 1);
+    bestX.SetLength(m + 1);
+    X.SetLength(m + 1);
+    Y.SetLength(m + 1);
             
+    bestX[m] = -1;
+    mRR = to_RR(m);        
+    
     tailcut = to_RR(tail)*sigma;
+    c = 1 + 1/mRR;
+    bestdiff = to_RR(3);
     
-    while(tailcut < to_RR(14)*sigma) {
+    while(tailcut < to_RR(tail+1)*sigma) {
         
-        c = 1;        
-        y0 = to_RR(0);
-        this->X[m] = tailcut;        
+        cu = to_RR(0);
+        cl = to_RR(1);
+        y0 = to_RR(-1);
+        lastdiff = to_RR(-2);
+        X[m] = tailcut;        
         
-        while(y0 < 1 || abs(y0)-1 > statDistance) {
+        while(y0 < 0 || abs(y0) > statDistance && abs(y0 - lastdiff) > statDistance) {
             
-            y0 = DZRecursion(m, c, sigma);
+            cc = c;
+            lastdiff = y0;
             
-            if(y0 == -1) // Error in "inv" calculus
+            y0 = DZRecursion(X, Y, m, tail, c, sigma) - to_RR(1);            
+            
+            if(y0 == -2) // Error in "inv" calculus
                 break;
             
-            if(y0 >= 1) { // The found partitioning is valid
-                validPartition = 1;
-                break;
-            }//end-if
+            if(y0 >= 0) { // The found partitioning is valid
+
+                for(int i = 0; i < m+1; i++)
+                    bestX[i] = X[i];
+                
+                cc = c;
+                cu = c;
+                bestdiff = y0;                
+                
+            } else
+                cl = c;
             
-            c++; // If no partitioning is found, repeat the process with incremented constant
+            if(cu < cl)
+                c += 1/mRR;
+            else
+                c = (cu + cl)/to_RR(2);
+            
+            if(c >= 11 || y0 == lastdiff)
+                break;
             
         }//end-while
-        
-        if(validPartition) // We return the first valid partition found
-            break;
-        
-        if(y0 < 1 && abs(y0)-1 > statDistance)
+                
+        if(y0 < 0 || abs(y0) > statDistance && abs(y0 - lastdiff) > statDistance)
             tailcut++;
         else
             break;
         
     }//end-while
     
-    if(validPartition) {
+    for(i = 0; i < m+1; i++)
+        cout << bestX[i] << endl;
+
+    if(bestX[m] != -1) {
         cout << "[*] DZCreatePartition status: Pass!" << endl;
         
-        this->X_ZZ.SetLength(this->X.length());
-        this->Y_ZZ.SetLength(this->Y.length());
+        this->X.SetLength(m + 1);
+        this->Y.SetLength(m + 1);
+        this->X_ZZ.SetLength(m + 1);
+        this->Y_ZZ.SetLength(m + 1);
 
-        long int i;
         // Computing the floor and ZZ format of values in X and Y vectors
         for(i = 0; i < this->X_ZZ.length(); i++) { // X and Y vectors have the same length m
+            this->X[i] = bestX[i];
+            this->Y[i] = Y[i];
             this->X_ZZ[i] = to_int(this->X[i]);
             this->Y_ZZ[i] = to_int(this->Y[i]);
-        }//end-for
-                
+        }//end-for        
+        
     }
     else // No valid partition was found
         cout << "[*] DZCreatePartition status: Error!" << endl;
@@ -275,58 +306,60 @@ void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail) {
 }//end-DZCreatePartition()
 
 /* It is used in DZCreatePartition to define the distance y0 */
-RR Samplers::DZRecursion(int m, int c, RR sigma) {
+RR Samplers::DZRecursion(Vec<RR>& X, Vec<RR>& Y, int m, int tail, RR c, RR sigma) {
     
     RR inv, minus2, overM, over2, S;
     
     minus2 = to_RR(-2);
     overM = to_RR(1)/to_RR(m);
     over2 = to_RR(1)/to_RR(2);
+        
+    // "Size" of each rectangle
+    S = sigma * overM * sqrt(ComputePi_RR()/to_RR(2)) * c;
+    
+    X[m] = to_RR(tail)*sigma;
+    Y[m] = this->Rho(sigma, to_RR(TruncToZZ(X[m]) + to_ZZ(1)));
+    
+    inv = minus2 * log(S/to_RR(TruncToZZ(X[m]) + to_ZZ(1)));
     
     if(inv < to_RR(0))
         return to_RR(-1);
     
-    // "Size" of each rectangle
-    S = sigma * overM * sqrt(ComputePi_RR() * over2) * to_RR(c);
-    
-    /* 
-     * In the reference code, this statement is always executed. Although, it overwrites the 
-     * "this->X[nRect] = tailcut;" statement in DZCreatePartition function.
-     */
-    //    X[nRect] = to_RR(tail*sigma);
-    this->Y[m] = Rho(sigma, this->X[m]);
-    
-    inv = minus2 * log(S/to_RR(TruncToZZ(this->X[m]) + to_ZZ(1)));
-    
-    this->X[m-1] = sigma * sqrt(inv);
-    this->Y[m-1] = Rho(sigma, this->X[m-1]);
+    X[m-1] = sigma * sqrt(inv);
+    cout << "X[m-1]: " << X[m-1] << endl;
+    Y[m-1] = this->Rho(sigma, X[m-1]);
     
     for(int i = m-2; i > 0; i--) {
-        inv = minus2 * log(S/to_RR(TruncToZZ(this->X[i+1]) + to_ZZ(1))) + Rho(sigma, this->X[i]);
+        
+        inv = minus2 * log(S/to_RR(TruncToZZ(X[i+1]) + to_ZZ(1)) + Rho(sigma, X[i+1]));
+        cout << "inv: " << inv << endl;
         
         if(inv < to_RR(0))
             return to_RR(-1);
         
-        this->X[i] = sigma * sqrt(inv); // Rho(sigma, x_i) = y_i
-        this->Y[i] = exp(-over2 * power(this->X[i]/sigma, 2)); // Rho^{-1}(sigma, Rho(sigma, x_i)) = x_i               
+        X[i] = sigma * sqrt(inv); // Rho(sigma, x_i) = y_i
+        Y[i] = exp(-over2 * power(X[i]/sigma, 2)); // Rho^{-1}(sigma, Rho(sigma, x_i)) = x_i               
+        
     }//end-for
     
-    this->Y[0] = (S/(to_RR(1) + this->X[1])) + Rho(sigma, this->X[1]);
-        
-    return this->Y[0];
+    Y[0] = (S/to_RR(to_ZZ(1) + TruncToZZ(X[1]))) + this->Rho(sigma, X[1]);
+    
+    cout << "\n\n\n";
+    
+    return Y[0];
     
 }//end-DZCreatePartition()
 
 /* Using the Knuth-Yao algorithm, it produces a n-dimension polynomial 
  * with coefficients from the Gaussian distribution */
-Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma) {
+Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma, RR c) {
     
     cout << "\n[*] Knuth-Yao Gaussian sampling" << endl;
     
     /* Output precision setup */
     RR::SetOutputPrecision(to_long(precision));
     
-    this->BuildProbabilityMatrix(precision, tailcut, sigma);
+    this->BuildProbabilityMatrix(precision, tailcut, sigma, c);
     cout << "[*] Probability matrix building status: Pass!" << endl;
     
     Vec<int> polynomial;
@@ -404,31 +437,36 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma) {
 
 /* This method build the probability matrix for samples in the range 
  * [-tailcut*\floor(sigma), +tailcut*\floor(sigma)] */
-void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma) {
-    
+void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c) {
+        
+    Vec< Vec<int> > auxP;
     // The random variable consists of elements in [-tailcut*sigma, tailcut*sigma]
-    int i, bound;
+    int bound, center, i, upperBound;
     RR probOfX;
     
-    bound = tailcut*to_int(sigma);    
+    bound = tailcut*to_int(sigma);
+    center = to_int(c);
     
-    this->P.SetLength(precision);    
-    for(i = 0; i < this->P.length(); i++)
-        this->P[i].SetLength(2*bound+1);
+    auxP.SetLength(precision);
+    for(i = 0; i < auxP.length(); i++)
+        auxP[i].SetLength(2*bound+1);
 
+    upperBound = center + bound;
     i = 2*bound;    
-    for(int x = -bound; x <= bound, i>= 0; x++, i--) {
-        probOfX = Probability(to_RR(x), sigma);
-        BinaryExpansion(probOfX, precision, i);
+    for(int x = (center - bound); x <= upperBound, i >= 0; x++, i--) {
+        probOfX = Probability(to_RR(x), sigma, c);
+        BinaryExpansion(auxP, probOfX, precision, i);
     }//end-for
        
+    this->P = auxP;
     // Uncomment this line if you want to preview the probability matrix P
 //    this->PrintMatrix("Probability matrix", this->P);
+//    cout << "\n[!] Probability matrix building process: Pass!" << endl;
     
 }//end-BuildProbabilityMatrix()
 
 /* Method for computing the binary expansion of a given probability in [0, 1] */
-void Samplers::BinaryExpansion(RR probability, int precision, int index) {
+void Samplers::BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precision, int index) {
     
     RR pow;
     int i, j;
@@ -438,10 +476,10 @@ void Samplers::BinaryExpansion(RR probability, int precision, int index) {
     while(probability > 0 && j < precision) {
         pow = power2_RR(i--); // 2^{i}
         if(pow <= probability) {
-            this->P[j][index] = 1;
+            auxP[j][index] = 1;
             probability -= pow;
         } else
-            this->P[j][index] = 0;
+            auxP[j][index] = 0;
         j++;
     }//end-while
             
@@ -626,35 +664,71 @@ void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
 }//end-PrintVectorZZX()
 
 /* Sampling a lattice point from a Gaussian centered in zero */
-ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut) {
+ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX c, int k) {
+        
+    RR::SetOutputPrecision(to_long(precision));
+
+    Vec<ZZX> auxB, C;
+    Vec<int> Z;
+    ZZX C0, mult, sample;
+    RR d, norm, sigma_i;
+    int i, m, phi;
     
-    ZZX c, mult;
-    RR sigmaI;
-    ZZ zero;
-    double d, norm;
-    int i, m, sample;
-    
-    m = B.length();
-    c.SetLength(m);
-    zero = to_ZZ(0);
-   
-    for(i = 0; i < m; i++) //Centered in zero
-        c[i] = zero;
-    
-    for(i = m-1; i >= 0; i--) {
-        norm = this->Norm(BTilde[i]);
-        d = to_double(this->InnerProduct(c, BTilde[i]))/(pow(norm, 2.0));
-        sigmaI = sigma/to_RR(norm);
-        sample = this->KnuthYao(precision, tailcut, sigmaI);
-        sample = (int)(sample + d);
-        mul(mult, B[i], (long)(sample));        
-        sub(c, c, mult);
+    m = B.length();    
+    phi = this->EulerPhiPowerOfTwo(k);
+        
+    Z.SetLength(m);
+    C0.SetLength(phi);
+    mult.SetLength(phi);
+    sample.SetLength(phi);
+            
+    auxB.SetLength(m);
+    C.SetLength(m);
+    for(i = 0; i < m; i++) {
+        auxB[i].SetLength(phi);
+        C[i].SetLength(phi);
+        auxB[i] = to_ZZX(B[i]); // Basis conversion from ZZ_pX to ZZX (no changes are made in coefficients)
     }//end-for
     
-    for(i = 0; i < m; i++)
-        c[i] = -c[i];
+    C[m-1].SetLength(phi);    
+    C[m-1] = c % this->phi; // Center of the lattice        
     
-    return c;
+    for(i = m-1; i > 0; i--) {
+        
+        norm = to_RR(this->Norm(BTilde[i]));
+        
+        // The new center for the discrete Gaussian
+        div(d, to_RR(this->InnerProduct(C[i], BTilde[i])), power(norm, 2.0));        
+        // And the standard deviation
+        div(sigma_i, sigma, norm);
+                
+        if(sigma_i < 1) // If sigma is smaller than 1, there is no integer to be sampled
+            sigma_i += 1;
+
+        this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d); // For Knuth-Yao algorithm                   
+        Z[i] = this->KnuthYao(precision, tailcut, sigma_i); // Sampling from a different Gaussian each iteration
+
+        mul(mult, auxB[i], (long)(Z[i])); // Multiply Z[i] with all coefficients of auxB        
+        sub(C[i-1], C[i], mult);
+        
+    }//end-for
+    
+    norm = to_RR(this->Norm(BTilde[i]));
+    div(d, to_RR(this->InnerProduct(C[i], BTilde[i])), power(norm, 2.0));        
+    div(sigma_i, sigma, norm);
+
+    if(sigma_i < 1) // If sigma is smaller than 1, there is no integer to be sampled
+        sigma_i += 1;
+
+    this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d); // For Knuth-Yao algorithm                   
+    Z[i] = this->KnuthYao(precision, tailcut, sigma_i); // Sampling from a different Gaussian each iteration
+
+    mul(mult, auxB[i], (long)(Z[i])); // Multiplication of Z[i] with all coefficients of auxB        
+    
+    sub(C0, C[i], mult);
+    sub(sample, c, C0);
+    
+    return sample;
     
 }//end-GaussianSamplerFromLattice()
 
@@ -708,3 +782,22 @@ ZZX Samplers::Mult(ZZX V, double c, int phi) {
         V[i] = to_ZZ(to_double(V[i]) * c);
     return V;
 }//end-Mult()
+
+RR Samplers::CoverageAreaZiggurat() {
+    
+    RR area, one;
+    int m;
+    
+    area = to_RR(0);
+    one = to_RR(1);    
+    m = this->X.length(); // Actually, the length is (m+1)
+    
+    for(int i = 2; i < m; i++) {        
+//        cout << "(X[i], Y[i-1], Y[i]) = (" << X[i] << ", " << Y[i-1] << ", " << Y[i] << ") " << endl; 
+        area += (one + ceil(this->X[i]))*(this->Y[i-1] - this->Y[i]);  
+//        cout << "area: " << area << endl;
+    }
+    
+    return area;
+    
+}
