@@ -279,9 +279,6 @@ void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail) {
         
     }//end-while
     
-    for(i = 0; i < m+1; i++)
-        cout << bestX[i] << endl;
-
     if(bestX[m] != -1) {
         cout << "[*] DZCreatePartition status: Pass!" << endl;
         
@@ -298,7 +295,7 @@ void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail) {
             this->Y_ZZ[i] = to_int(this->Y[i]);
         }//end-for        
         
-    }
+    }//end-if
     else // No valid partition was found
         cout << "[*] DZCreatePartition status: Error!" << endl;
         
@@ -316,6 +313,7 @@ RR Samplers::DZRecursion(Vec<RR>& X, Vec<RR>& Y, int m, int tail, RR c, RR sigma
         
     // "Size" of each rectangle
     S = sigma * overM * sqrt(ComputePi_RR()/to_RR(2)) * c;
+    cout << "Área total: " << (S * m) << " " << S << endl;
     
     X[m] = to_RR(tail)*sigma;
     Y[m] = this->Rho(sigma, to_RR(TruncToZZ(X[m]) + to_ZZ(1)));
@@ -326,13 +324,11 @@ RR Samplers::DZRecursion(Vec<RR>& X, Vec<RR>& Y, int m, int tail, RR c, RR sigma
         return to_RR(-1);
     
     X[m-1] = sigma * sqrt(inv);
-    cout << "X[m-1]: " << X[m-1] << endl;
     Y[m-1] = this->Rho(sigma, X[m-1]);
     
     for(int i = m-2; i > 0; i--) {
         
         inv = minus2 * log(S/to_RR(TruncToZZ(X[i+1]) + to_ZZ(1)) + Rho(sigma, X[i+1]));
-        cout << "inv: " << inv << endl;
         
         if(inv < to_RR(0))
             return to_RR(-1);
@@ -343,8 +339,6 @@ RR Samplers::DZRecursion(Vec<RR>& X, Vec<RR>& Y, int m, int tail, RR c, RR sigma
     }//end-for
     
     Y[0] = (S/to_RR(to_ZZ(1) + TruncToZZ(X[1]))) + this->Rho(sigma, X[1]);
-    
-    cout << "\n\n\n";
     
     return Y[0];
     
@@ -792,12 +786,15 @@ RR Samplers::CoverageAreaZiggurat() {
     one = to_RR(1);    
     m = this->X.length(); // Actually, the length is (m+1)
     
-    for(int i = 2; i < m; i++) {        
-//        cout << "(X[i], Y[i-1], Y[i]) = (" << X[i] << ", " << Y[i-1] << ", " << Y[i] << ") " << endl; 
+    for(int i = 1; i < m; i++)
         area += (one + ceil(this->X[i]))*(this->Y[i-1] - this->Y[i]);  
-//        cout << "area: " << area << endl;
-    }
+
+    cout << "Área total: " << area << endl;
+    
+    area = to_RR(0);
+    for(int i = 2; i < m-1; i++)
+        area += (one + ceil(this->X[i-1]))*(this->Y[i-1] - this->Y[i]);  
     
     return area;
     
-}
+}//end-CoverageAreaZiggurat()
