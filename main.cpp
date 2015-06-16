@@ -19,7 +19,7 @@ static timestamp_t get_timestamp() {
 
 int main(void) {
         
-    int action = 3;
+    int action = 2;
     
     int h, k;
     double lambda;
@@ -105,20 +105,25 @@ int main(void) {
             Vec<ZZX> BTilde;
             Vec<ZZ> C;
             Vec<double> D;
-            ZZ_pX c; // Center of the lattice
+            ZZX c; // Center of the lattice
+            ZZ zero = to_ZZ(0);
+            c.SetMaxLength(hibe->GetN());
             
-            random(c, hibe->GetN()); // n = 2^{k-1} = \phi(m)           
+            for(int i = 0; i < hibe->GetN(); i++) // Lattice centered in zero
+                c[i] = zero;            
             
-            // Segmentation fault :-(
+            // Lattice with random center
+//            random(c, hibe->GetN()); // n = 2^{k-1} = \phi(m)           
+            
             hibe->GetSampler()->FasterIsometricGSO(BTilde, C, D, hibe->GetA(), k);
-            cout << "/* Basis A */" << endl;
+            cout << "\n/* Basis A */" << endl;
             cout << hibe->GetA() << endl;
             
             cout << "\n/* Gram-Schmidt reduced basis */" << endl;
             cout << BTilde << endl;
             
-            cout << "\nSample from the lattice: \n" << hibe->GetSampler()->GaussianSamplerFromLattice(hibe->GetA(), BTilde, sigmaRR, precision, tailcut, to_ZZX(c), k) << endl;            
-                    
+            cout << "\nSample from the lattice: \n" << hibe->GetSampler()->GaussianSamplerFromLattice(hibe->GetA(), BTilde, sigmaRR, precision, tailcut, c, k) << endl;            
+                        
             break;
         }
         case 3: {

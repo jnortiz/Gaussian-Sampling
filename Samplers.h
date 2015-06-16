@@ -20,7 +20,7 @@ using namespace NTL;
 class Samplers {
 public:
     
-    Samplers(int k);
+    Samplers(int k, int q);
     virtual ~Samplers();
     
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
