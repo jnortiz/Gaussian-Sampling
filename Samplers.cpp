@@ -298,8 +298,7 @@ void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail) {
     }//end-if
     else // No valid partition was found
         cout << "[*] DZCreatePartition status: Error!" << endl;
-        
-    
+            
 }//end-DZCreatePartition()
 
 /* It is used in DZCreatePartition to define the distance y0 */
@@ -313,7 +312,6 @@ RR Samplers::DZRecursion(Vec<RR>& X, Vec<RR>& Y, int m, int tail, RR c, RR sigma
         
     // "Size" of each rectangle
     S = sigma * overM * sqrt(ComputePi_RR()/to_RR(2)) * c;
-    cout << "Área total: " << (S * m) << " " << S << endl;
     
     X[m] = to_RR(tail)*sigma;
     Y[m] = this->Rho(sigma, to_RR(TruncToZZ(X[m]) + to_ZZ(1)));
@@ -455,7 +453,6 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
     this->P = auxP;
     // Uncomment this line if you want to preview the probability matrix P
 //    this->PrintMatrix("Probability matrix", this->P);
-//    cout << "\n[!] Probability matrix building process: Pass!" << endl;
     
 }//end-BuildProbabilityMatrix()
 
@@ -679,7 +676,7 @@ ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BT
     auxB.SetLength(m);
     C.SetLength(m);
     for(i = 0; i < m; i++) {
-        auxB[i].SetLength(phi);
+        auxB[i].SetLength(m);
         C[i].SetLength(phi);
         auxB[i] = to_ZZX(B[i]); // Basis conversion from ZZ_pX to ZZX (no changes are made in coefficients)
     }//end-for
@@ -739,12 +736,13 @@ void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, 
     m = B.length();
     phi = this->EulerPhiPowerOfTwo(k);
     
-    B1.SetLength(phi);
-    V.SetLength(phi);
-    V1.SetLength(phi);
     C.SetLength(m);
     D.SetLength(m);
     
+    B1.SetLength(phi);
+    V.SetLength(phi);
+    V1.SetLength(phi);
+        
     BTilde.SetLength(m);
     for(i = 0; i < BTilde.length(); i++)
         BTilde[i].SetLength(phi);
@@ -777,23 +775,17 @@ ZZX Samplers::Mult(ZZX V, double c, int phi) {
     return V;
 }//end-Mult()
 
-RR Samplers::CoverageAreaZiggurat() {
+RR Samplers::CoverageAreaZiggurat(RR sigma) {
     
     RR area, one;
     int m;
     
-    area = to_RR(0);
     one = to_RR(1);    
-    m = this->X.length(); // Actually, the length is (m+1)
-    
-    for(int i = 1; i < m; i++)
-        area += (one + ceil(this->X[i]))*(this->Y[i-1] - this->Y[i]);  
-
-    cout << "Área total: " << area << endl;
+    m = this->X.length(); // Actually, m is the numbers of rectangles plus one
     
     area = to_RR(0);
-    for(int i = 2; i < m-1; i++)
-        area += (one + ceil(this->X[i-1]))*(this->Y[i-1] - this->Y[i]);  
+    for(int i = 1; i < m-1; i++) // Riemann sum
+        area += this->Probability(this->X[i], sigma, to_RR(0)) * (this->X[i] - this->X[i-1]);
     
     return area;
     

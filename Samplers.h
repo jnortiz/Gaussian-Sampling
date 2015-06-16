@@ -29,7 +29,7 @@ public:
     ZZX GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX c, int k);
     void FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, const Vec<ZZ_pX>& B, int k);
     void DZCreatePartition(int m, RR sigma, int n, int tail);
-    RR CoverageAreaZiggurat();
+    RR CoverageAreaZiggurat(RR sigma);
         
 private:
         
