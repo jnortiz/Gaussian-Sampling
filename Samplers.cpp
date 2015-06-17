@@ -22,7 +22,7 @@
 using namespace NTL;
 using namespace std;
 
-Samplers::Samplers(int k, int q) {
+Samplers::Samplers(int k, int q, const ZZ_pX& f) {
     
     ZZ_p::init(conv<ZZ>(q)); // Coefficients modulo
 
@@ -41,14 +41,7 @@ Samplers::Samplers(int k, int q) {
           
     NTL::SetSeed(to_ZZ(randint));    
     
-    int phi;
-    phi = this->EulerPhiPowerOfTwo(k); //It computes \phi(m), with m = 2^k
-    this->phi.SetLength(phi+1);
-    SetCoeff(this->phi, 0, 1);
-    SetCoeff(this->phi, phi, 1);
-    
-    //It's used for sampling from lattice
-    this->BuildVandermondeMatrix(k);
+    this->f = f;
     
 }//end-Samplers()
 
@@ -491,169 +484,38 @@ ZZX Samplers::Isometry(ZZX& b) {
     if(IsZero(b))
         return b;
     
-    b %= this->phi;
-    return MulByXMod(b, this->phi);
+    return MulByXMod(b, to_ZZX(this->f));
     
 }//end-Isometry()
 
 /* Norm of a polynomial */
-double Samplers::Norm(const ZZX& b) {
+ZZ Samplers::Norm(const ZZX& b, int n) {
     
-    if(IsZero(b))
-        return 0;
+    ZZ norm = to_ZZ(0);
+
+    for(int i = 0; i < n; i++)
+        norm += b[i]*b[i];
     
-    Vec< complex<double> > mult;
-    complex<double> sum;
-    int aux, colsV, i, j, rowsV;
-    
-    colsV = this->V[0].length();
-    rowsV = this->V.length();
-    mult.SetLength(rowsV);
-    
-    /* Each row contains b(\psi_m^{i}) */
-    for(i = 0; i < rowsV; i++) {
-        sum = 0;
-        for(j = 0; j < colsV; j++) {
-            aux = to_int(b[j]);
-            sum += this->V[i][j]*(complex<double>)aux;
-        }//end-for
-        mult[i] = sum;
-    }//end-for
-    
-    sum = 0; 
-    for(i = 0; i < rowsV; i++)
-        sum += pow(mult[i].real(), 2.0) + pow(mult[i].imag(), 2.0);        
-    
-    return sqrt(sum).real();
-    
+    return SqrRoot(norm);
+        
 }//end-Norm()
 
 /* Computation of the inner product as matrix multiplication */
-ZZ Samplers::InnerProduct(const ZZX& a, const ZZX& b) {
-    // <a, b> = a^{T} * \bar{V^{T}} * V * b
+ZZ Samplers::InnerProduct(const ZZX& a, const ZZX& b, int n) {
     
-    if(IsZero(a) || IsZero(b))
-        return to_ZZ(0);
+    ZZ innerp = to_ZZ(0);
+
+    for(int i = 0; i < n; i++)
+        innerp += a[i]*b[i];
     
-    int colsV, i, j, rowsV;
-    colsV = this->V[0].length();
-    rowsV = this->V.length();
-    
-    Vec< Vec< complex<double> > > transpV;
-    Vec< ZZX > C;
-    transpV.SetLength(colsV);
-    C.SetLength(colsV);
-    
-    for(i = 0; i < colsV; i++) {
-        C[i].SetLength(colsV);
-        transpV[i].SetLength(rowsV);
-    }//end-for
-    
-    /* Transposition of Vandermonde matrix V */
-    for(i = 0; i < colsV; i++)
-        for(j = 0; j < rowsV; j++)
-            transpV[i][j] = this->V[j][i];
-    
-    /* Computation of conjugate of V^{T} */
-    this->ConjugateOfMatrix(transpV);
-    
-    /* Integer matrix multiplication \bar{V^{T}} * V */
-    this->ComplexMatrixMult(C, transpV, this->V);
-    
-    /* D = a^{T} * \bar{V^{T}} * V */
-    ZZX D;
-    ZZ sum;
-    D.SetLength(colsV);
-    
-    for(i = 0; i < colsV; i++) {
-        for(j = 0, sum = 0; j < colsV; j++)
-            sum += C[j][i]*b[i];
-        D[i] = sum;
-    }//end-for
-    
-    /* Final computation. The output is an integer */
-    sum = to_ZZ(0);
-    for(i = 0; i < colsV; i++)
-        sum += a[i]*D[i];    
-    
-    return sum;
+    return innerp;    
     
 }//end-InnerProduct()
-
-/* The Vandermonde matrix computes the i-th m-th roots of unity 
- * and their exponentiations */
-void Samplers::BuildVandermondeMatrix(int k) {
-    
-    complex<double> rootOfUnity;
-    double pi;
-    int i, index, j, m, phi;
-    
-    pi = to_double(ComputePi_RR());
-    m = pow(2, k);
-    phi = this->EulerPhiPowerOfTwo(k);
-    
-    this->V.SetLength(phi);
-    
-    index = 0;
-    for(i = 1; i < m; i++) {        
-        this->V[index].SetLength(phi);
-        if(GCD(i, m) == 1) {
-            rootOfUnity = std::polar(1.0, (double)((2*pi*i)/(double)m));        
-            for(j = 0; j < phi; j++)
-                this->V[index][j] = pow(rootOfUnity, j);
-            index++;
-        }//end-if        
-    }//end-for
-        
-}//end-BuildVandermondMatrix()
 
 /* Computation of Euler's phi function for m = 2^k, p = 2 */
 int Samplers::EulerPhiPowerOfTwo(int k) {
     return pow(2.0, k-1);    
 }//end-EulerPhiPowerOfTwo()
-
-/* It computer the conjugate of each element in the matrix */
-void Samplers::ConjugateOfMatrix(Vec< Vec< complex<double> > >& M) {
-    
-    int cols, rows;
-    cols = M[0].length();
-    rows = M.length();
-    
-    for(int i = 0; i < rows; i++)
-        for(int j = 0; j < cols; j++)
-            M[i][j] = std::conj(M[i][j]);
-    
-}//end-ConjugateOfMatrix()
-
-/* Matrix multiplication of complex numbers generating an integer matrix */
-void Samplers::ComplexMatrixMult(Vec< ZZX >& c, const Vec< Vec< complex<double> > >& a, const Vec< Vec< complex<double> > >& b) {       
-
-    int colsA, colsB, i, j, k, rowsA, rowsB;
-    colsA = a[0].length();
-    colsB = b[0].length();
-    rowsA = a.length();
-    rowsB = b.length();
-    
-    if(colsA == rowsB) {
-        
-        complex<double> sum;
-        
-        c.SetLength(rowsA);
-        for(i = 0; i < rowsA; i++)
-            c[i].SetLength(colsB);        
-        
-        for (k = 0; k < rowsA; k++) {
-          for (j = 0; j < colsB; j++) {
-            sum = 0;
-            for (i = 0; i < rowsB; i++)
-              sum = sum + a[k][i]*b[i][j];
-            c[k][j] = to_ZZ(sum.real());
-         }//end-for
-        }//end-for
-        
-    }//end-if
-    
-}//end-Mult()
 
 void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
     
@@ -674,7 +536,8 @@ ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BT
     Vec<ZZX> auxB, C;
     Vec<int> Z;
     ZZX C0, mult, sample;
-    RR d, norm, sigma_i;
+    ZZ norm;
+    RR d, sigma_i;
     int i, m, n, phi;
     
     m = B.length(); // m = m1 + m2 ~ 55
@@ -696,21 +559,22 @@ ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BT
     
     C[m-1] = c; // Center of the lattice        
     
-    /* The inner product and norm operations are taken in F where 
-     * the leading coefficient degree is phi(m) instead of n = 2^k */
+    /* The inner product and norm operations are taken 
+     * in the inner product space H */
     for(i = m-1; i > 0; i--) {
         
-        norm = to_RR(this->Norm(BTilde[i]));
+        norm = this->Norm(BTilde[i], n);
         
-        if(norm == 0) {
+        if(norm == to_ZZ(0)) {
             cout << "\n[!] Error: division by zero ahead. Norm is zero. Aborting..." << endl;
             return to_ZZX(-1);
         }//end-if
                     
         // The new center for the discrete Gaussian
-        div(d, to_RR(this->InnerProduct((C[i] % this->phi), BTilde[i])), power(norm, 2.0));        
+        div(d, to_RR(this->InnerProduct(C[i], BTilde[i], n)), to_RR(this->InnerProduct(BTilde[i], BTilde[i], n)));        
+
         // And the new standard deviation
-        div(sigma_i, sigma, norm);
+        div(sigma_i, sigma, to_RR(norm));
         
         // Problem: what if sigma_i < 1? Should be possible to sample from a discrete Gaussian distribution?
         // It can be a problem in GSO algorithm...
@@ -725,19 +589,24 @@ ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BT
         
     }//end-for
     
-    norm = to_RR(this->Norm(BTilde[i]));
-    div(d, to_RR(this->InnerProduct((C[i] % this->phi), BTilde[i])), power(norm, 2.0));        
-    div(sigma_i, sigma, norm);
+    norm = this->Norm(BTilde[i], n);
 
-    if(sigma_i < 1) // If sigma is smaller than 1, there is no integer to be sampled
+    if(norm == to_ZZ(0)) {
+        cout << "\n[!] Error: division by zero ahead. Norm is zero. Aborting..." << endl;
+        return to_ZZX(-1);
+    }//end-if
+
+    div(d, to_RR(this->InnerProduct(C[i], BTilde[i], n)), to_RR(this->InnerProduct(BTilde[i], BTilde[i], n)));        
+    div(sigma_i, sigma, to_RR(norm));
+    
+    if(sigma_i < 1)
         sigma_i += 1;
 
-    this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d); // For Knuth-Yao algorithm                   
-    Z[i] = this->KnuthYao(precision, tailcut, sigma_i); // Sampling from a different Gaussian each iteration
+    this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d);                   
+    Z[i] = this->KnuthYao(precision, tailcut, sigma_i);
 
-    mul(mult, auxB[i], (long)(Z[i])); // Multiplication of Z[i] with all coefficients of auxB           
-    sub(C0, C[i], mult);
-    
+    mul(mult, auxB[i], (long)(Z[i]));  
+    sub(C0, C[i], mult);    
     sub(sample, c, C0);
     
     return sample;
@@ -745,23 +614,21 @@ ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BT
 }//end-GaussianSamplerFromLattice()
 
 /* Gram-Schmidt reduced basis generation */
-void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, const Vec<ZZ_pX>& B, int k) {
+void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<ZZ>& D, const Vec<ZZ_pX>& B, int n) {
     
-    cout << "[*] Running FasterIsometricGSO: ";
+    cout << "\n[*] Running FasterIsometricGSO: ";
     
     /* This implementation follows the Algorithm 3 
      * of (Lyubashevsky, and Prest, 2015) */
     
-    ZZX isometry;
+    ZZX isometry, mult;
     ZZX B1; // B[0] reduced modulo Phi_m(x)
     ZZX V; // Updated at each iteration
-    ZZX V1; // It stores the first value of V
-    double div, Cdouble;
-    int i, m, phi;
+    ZZ CD, norm;
+    int i, m;
     
     // Lengths:
     m = B.length();
-    phi = this->EulerPhiPowerOfTwo(k); // phi(m) = 2^{k-1}
     
     // Vectors:
     BTilde.SetLength(m);
@@ -769,29 +636,38 @@ void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, 
     D.SetLength(m);
     
     for(i = 0; i < m; i++)
-        BTilde[i].SetMaxLength(phi);
+        BTilde[i].SetMaxLength(n);
     
     // Polynomials:
-    V.SetMaxLength(phi);
-    V1.SetMaxLength(phi);
-    isometry.SetMaxLength(phi);
+    isometry.SetMaxLength(n);
+    mult.SetMaxLength(n);
+    B1.SetMaxLength(n);
+    V.SetMaxLength(n);
     
-    B1 = to_ZZX(B[0]) % this->phi;
-    BTilde[0] = B1; V1 = B1; V = B1;
+    B1 = to_ZZX(B[0]);
+    BTilde[0] = B1;
+    V = B1;
     
-    C[0] = this->InnerProduct(V1, this->Isometry(B1));
-    D[0] = pow(this->Norm(B1), 2.0);
+    C[0] = this->InnerProduct(B1, this->Isometry(B1), n);
+    norm = this->Norm(B1, n);
+    mul(D[0], norm, norm);
+    
+    for(i = 0; i < m-1; i++) {
         
-    for(i = 0; i < m-1; i++) {        
+        if(D[i] == to_ZZ(0)) {
+            cout << "\n[!] Error: division by zero ahead. Norm is zero. Aborting..." << endl;
+            return;
+        }//end-if
         
-        Cdouble = to_double(C[i]);
-        div = Cdouble/D[i];
+        div(CD, C[i], D[i]);
         isometry = this->Isometry(BTilde[i]);
-        
-        sub(BTilde[i+1], isometry, this->Mult(V, div, phi)); 
-        sub(V, V, this->Mult(isometry, div, phi));
-        C[i+1] = this->InnerProduct(V1, this->Isometry(BTilde[i+1]));                
-        D[i+1] = D[i] - div*Cdouble;
+        mul(mult, V, CD);
+        sub(BTilde[i+1], isometry, mult); 
+        mul(mult, isometry, CD);
+        sub(V, V, mult);        
+        C[i+1] = this->InnerProduct(B1, this->Isometry(BTilde[i+1]), n);        
+        mul(D[i+1], CD, C[i]);
+        sub(D[i+1], D[i], D[i+1]);
         
     }//end-for
     
@@ -799,36 +675,18 @@ void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, 
         
 }//end-FasterIsometricGSO()
 
-ZZX Samplers::Mult(ZZX V, double c, int phi) {    
+ZZX Samplers::Mult(ZZX V, RR c, int phi) {    
     
-    RR cRR, v;    
-    cRR = to_RR(c);
+    RR v;    
 
     if(!IsZero(V)) {
         for(int i = 0; i < phi; i++) {
             v = to_RR(V[i]);
-            V[i] = to_ZZ(v*cRR);            
-        }
+            V[i] = to_ZZ(v*c);            
+        }//end-for
     } else
         V = to_ZZX(0);
     
     return V;
     
 }//end-Mult()
-
-RR Samplers::CoverageAreaZiggurat(RR sigma) {
-    
-    RR area, one;
-    int m;
-    
-    one = to_RR(1);    
-    m = this->X.length(); // Actually, in this point, m is the numbers of rectangles plus one
-    m--;
-    
-    area = to_RR(0);
-    for(int i = 1; i < m; i++) // Riemann sum
-        area += this->Probability(this->X[i], sigma, to_RR(0)) * (this->X[i] - this->X[i-1]);
-    
-    return area;
-    
-}//end-CoverageAreaZiggurat()

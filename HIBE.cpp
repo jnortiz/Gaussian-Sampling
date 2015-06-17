@@ -40,7 +40,7 @@ HIBE::HIBE(double q, int m1, int m2, int k) {
     SetCoeff(f, this->n, 1);
     this->f = f;
     ZZ_pE::init(f); // Ring elements modulo
-    this->sampler = new Samplers(k, q);
+    this->sampler = new Samplers(k, q, f);
 }
 
 HIBE::~HIBE() {

@@ -27,7 +27,7 @@ int main(void) {
 
     h = 10;
     k = 3; // n = 2^k is the degree of polynomials in R and R_0
-    q = 19; //q must be prime and congruent to 3 mod 8
+    q = 11; //q must be prime and congruent to 3 mod 8
     m1 = 6;
     m2 = 49; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
     r = ceil((double)(1 + (log(q)/log(3))));
@@ -64,7 +64,7 @@ int main(void) {
     RR c = to_RR(0); // Center of the distribution            
     int tailcut = 13;
     int precision = 107;
-    int nRectangles = 63; // Parameter of Ziggurat algorithm
+    int nRectangles = 800; // Parameter of Ziggurat algorithm
     int omega = precision; // Parameter of Ziggurat algorithm
     
     switch(action) {
@@ -97,14 +97,14 @@ int main(void) {
             
             break;
         }
-        case 2: { // Case still under analysis
+        case 2: { // Still working on it...
             
             // Creating the basis needed to sample from the lattice
             hibe->Setup(h); // Setup algorithm with h = 10
             
             Vec<ZZX> BTilde;
             Vec<ZZ> C;
-            Vec<double> D;
+            Vec<ZZ> D;
             ZZX c; // Center of the lattice
             ZZ zero = to_ZZ(0);
             c.SetMaxLength(hibe->GetN());
@@ -115,29 +115,16 @@ int main(void) {
             // Lattice with random center
 //            random(c, hibe->GetN()); // n = 2^{k-1} = \phi(m)           
             
-            hibe->GetSampler()->FasterIsometricGSO(BTilde, C, D, hibe->GetA(), k);
             cout << "\n/* Basis A */" << endl;
             cout << hibe->GetA() << endl;
+            
+            hibe->GetSampler()->FasterIsometricGSO(BTilde, C, D, hibe->GetA(), hibe->GetN());
             
             cout << "\n/* Gram-Schmidt reduced basis */" << endl;
             cout << BTilde << endl;
             
             cout << "\nSample from the lattice: \n" << hibe->GetSampler()->GaussianSamplerFromLattice(hibe->GetA(), BTilde, sigmaRR, precision, tailcut, c, k) << endl;            
                         
-            break;
-        }
-        case 3: {
-            
-            RR area, percentage;
-            
-            hibe->GetSampler()->DZCreatePartition(nRectangles, sigmaRR, precision, tailcut);
-            
-            area = hibe->GetSampler()->CoverageAreaZiggurat(sigmaRR);
-            percentage = 100*(area/to_RR(0.5));
-            
-            cout << "Coverage area: " << area << endl;
-            cout << "Percentage: " << percentage << endl; 
-            
             break;
         }
         default:

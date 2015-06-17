@@ -20,22 +20,21 @@ using namespace NTL;
 class Samplers {
 public:
     
-    Samplers(int k, int q);
+    Samplers(int k, int q, const ZZ_pX& f);
     virtual ~Samplers();
     
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
     Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma, RR c);
     void PolyGenerator(ZZX& b, int length, int q);
-    ZZX GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX c, int k);
-    void FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<double>& D, const Vec<ZZ_pX>& B, int k);
-    void DZCreatePartition(int m, RR sigma, int n, int tail);
-    RR CoverageAreaZiggurat(RR sigma);
-        
+    
+    ZZX GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX c, int k);    
+    void FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<ZZ>& D, const Vec<ZZ_pX>& B, int k);
+            
 private:
         
     /* Attributes for sampling from lattice */
     Vec< Vec< complex<double> > > V; //Vandermonde matrix
-    ZZX phi;// Polynomial F = Q[X]/<phi>    
+    ZZ_pX f;// Polynomial R = Z_p[X]/f    
         
     /* Knuth-Yao attributes */
     Vec< Vec<int> > P;
@@ -51,7 +50,7 @@ private:
     int KnuthYao(int precision, int tailcut, RR sigma);
     
     /* Auxiliary functions of Ziggurat algorithm */
-//    void DZCreatePartition(int m, RR sigma, int n, int tail);
+    void DZCreatePartition(int m, RR sigma, int n, int tail);
     RR DZRecursion(Vec<RR>& X, Vec<RR>& Y, int m, int tail, RR c, RR sigma);
     RR Rho(RR sigma, RR x);
     ZZ sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i);
@@ -62,16 +61,13 @@ private:
     void BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c);
 
     /* Auxiliary functions of lattice sampler */
-    void BuildVandermondeMatrix(int k);
     int EulerPhiPowerOfTwo(int k);
-    void ConjugateOfMatrix(Vec< Vec< complex<double> > >& M);    
-    void ComplexMatrixMult(Vec<ZZX>& c, const Vec< Vec< complex<double> > >& a, const Vec< Vec< complex<double> > >& b);
-    ZZ InnerProduct(const ZZX& a, const ZZX& b);
-    double Norm(const ZZX& b);
+    ZZ InnerProduct(const ZZX& a, const ZZX& b, int n);
+    ZZ Norm(const ZZX& b, int n);
     ZZX Isometry(ZZX& b);
     
     void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
-    ZZX Mult(ZZX V, double c, int m);
+    ZZX Mult(ZZX V, RR c, int m);
 //    RR CoverageAreaZiggurat();
     
 };
