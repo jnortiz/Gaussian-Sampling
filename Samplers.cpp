@@ -24,8 +24,6 @@ using namespace std;
 
 Samplers::Samplers(int k, int q, const ZZ_pX& f) {
     
-    ZZ_p::init(conv<ZZ>(q)); // Coefficients modulo
-
     int randint;
     int bytes_read;
     int fd = open("/dev/urandom", O_RDONLY);
@@ -41,7 +39,9 @@ Samplers::Samplers(int k, int q, const ZZ_pX& f) {
           
     NTL::SetSeed(to_ZZ(randint));    
     
+    ZZ_p::init(conv<ZZ>(q)); // Coefficients modulo
     this->f = f;
+    ZZ_pE::init(f); // Ring elements modulo
     
 }//end-Samplers()
 
@@ -489,14 +489,14 @@ ZZX Samplers::Isometry(ZZX& b) {
 }//end-Isometry()
 
 /* Norm of a polynomial */
-ZZ Samplers::Norm(const ZZX& b, int n) {
+RR Samplers::Norm(const ZZX& b, int n) {
     
     ZZ norm = to_ZZ(0);
 
     for(int i = 0; i < n; i++)
         norm += b[i]*b[i];
     
-    return SqrRoot(norm);
+    return SqrRoot(to_RR(norm));
         
 }//end-Norm()
 
@@ -528,165 +528,248 @@ void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
     
 }//end-PrintVectorZZX()
 
-/* Sampling a lattice point from a Gaussian centered in zero */
-ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX c, int k) {
-        
-    RR::SetOutputPrecision(to_long(precision));
-
-    Vec<ZZX> auxB, C;
-    Vec<int> Z;
-    ZZX C0, mult, sample;
-    ZZ norm;
-    RR d, sigma_i;
-    int i, m, n, phi;
+RR Samplers::GramSchmidtProcess(Vec<ZZX>& BTilde, const Vec<ZZ_pX>& B, int n) {
     
-    m = B.length(); // m = m1 + m2 ~ 55
-    n = pow(2, k); // n = 2^k
-    phi = this->EulerPhiPowerOfTwo(k);
-    
-    Z.SetLength(m);
-    C0.SetLength(n);
-    mult.SetLength(n);
-    sample.SetLength(n);
-            
-    auxB.SetLength(m);
-    C.SetLength(m);
-    for(i = 0; i < m; i++) {
-        auxB[i].SetLength(n);
-        C[i].SetLength(n);
-        auxB[i] = to_ZZX(B[i]); // Basis conversion from ZZ_pX to ZZX (no changes are made in coefficients)
-    }//end-for
-    
-    C[m-1] = c; // Center of the lattice        
-    
-    /* The inner product and norm operations are taken 
-     * in the inner product space H */
-    for(i = m-1; i > 0; i--) {
-        
-        norm = this->Norm(BTilde[i], n);
-        
-        if(norm == to_ZZ(0)) {
-            cout << "\n[!] Error: division by zero ahead. Norm is zero. Aborting..." << endl;
-            return to_ZZX(-1);
-        }//end-if
-                    
-        // The new center for the discrete Gaussian
-        div(d, to_RR(this->InnerProduct(C[i], BTilde[i], n)), to_RR(this->InnerProduct(BTilde[i], BTilde[i], n)));        
-
-        // And the new standard deviation
-        div(sigma_i, sigma, to_RR(norm));
-        
-        // Problem: what if sigma_i < 1? Should be possible to sample from a discrete Gaussian distribution?
-        // It can be a problem in GSO algorithm...
-        if(sigma_i < 1) // If sigma is smaller than 1, there is no integer to be sampled
-            sigma_i += 1;
-
-        this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d); // For Knuth-Yao algorithm                   
-        Z[i] = this->KnuthYao(precision, tailcut, sigma_i); // Sampling from a different Gaussian each iteration
-
-        mul(mult, auxB[i], (long)(Z[i])); // Multiply Z[i] with all coefficients of auxB        
-        sub(C[i-1], C[i], mult);
-        
-    }//end-for
-    
-    norm = this->Norm(BTilde[i], n);
-
-    if(norm == to_ZZ(0)) {
-        cout << "\n[!] Error: division by zero ahead. Norm is zero. Aborting..." << endl;
-        return to_ZZX(-1);
-    }//end-if
-
-    div(d, to_RR(this->InnerProduct(C[i], BTilde[i], n)), to_RR(this->InnerProduct(BTilde[i], BTilde[i], n)));        
-    div(sigma_i, sigma, to_RR(norm));
-    
-    if(sigma_i < 1)
-        sigma_i += 1;
-
-    this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d);                   
-    Z[i] = this->KnuthYao(precision, tailcut, sigma_i);
-
-    mul(mult, auxB[i], (long)(Z[i]));  
-    sub(C0, C[i], mult);    
-    sub(sample, c, C0);
-    
-    return sample;
-    
-}//end-GaussianSamplerFromLattice()
-
-/* Gram-Schmidt reduced basis generation */
-void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<ZZ>& D, const Vec<ZZ_pX>& B, int n) {
-    
-    cout << "\n[*] Running FasterIsometricGSO: ";
-    
-    /* This implementation follows the Algorithm 3 
-     * of (Lyubashevsky, and Prest, 2015) */
-    
-    ZZX isometry, mult;
-    ZZX B1; // B[0] reduced modulo Phi_m(x)
-    ZZX V; // Updated at each iteration
-    ZZ CD, norm;
-    int i, m;
-    
-    // Lengths:
+    ZZX mult;
+    ZZ innerpr;
+    RR mu, norm;
+    int i, j, m;
     m = B.length();
     
-    // Vectors:
+    // Gram-Schmidt reduced basis
     BTilde.SetLength(m);
-    C.SetLength(m);
-    D.SetLength(m);
-    
-    for(i = 0; i < m; i++)
-        BTilde[i].SetMaxLength(n);
-    
-    // Polynomials:
-    isometry.SetMaxLength(n);
-    mult.SetMaxLength(n);
-    B1.SetMaxLength(n);
-    V.SetMaxLength(n);
-    
-    B1 = to_ZZX(B[0]);
-    BTilde[0] = B1;
-    V = B1;
-    
-    C[0] = this->InnerProduct(B1, this->Isometry(B1), n);
-    norm = this->Norm(B1, n);
-    mul(D[0], norm, norm);
-    
-    for(i = 0; i < m-1; i++) {
-        
-        if(D[i] == to_ZZ(0)) {
-            cout << "\n[!] Error: division by zero ahead. Norm is zero. Aborting..." << endl;
-            return;
-        }//end-if
-        
-        div(CD, C[i], D[i]);
-        isometry = this->Isometry(BTilde[i]);
-        mul(mult, V, CD);
-        sub(BTilde[i+1], isometry, mult); 
-        mul(mult, isometry, CD);
-        sub(V, V, mult);        
-        C[i+1] = this->InnerProduct(B1, this->Isometry(BTilde[i+1]), n);        
-        mul(D[i+1], CD, C[i]);
-        sub(D[i+1], D[i], D[i+1]);
-        
-    }//end-for
-    
-    cout << "Pass!" << endl;
-        
-}//end-FasterIsometricGSO()
+    mult.SetLength(n);
 
-ZZX Samplers::Mult(ZZX V, RR c, int phi) {    
+    for(i = 0; i < m; i++)
+        BTilde[i].SetLength(n); // n coefficients        
+    
+    for(i = 0; i < m; i++) {
+        
+        BTilde[i] = to_ZZX(B[i]);
+        
+        for(j = 0; j < i; j++) {            
+            
+            innerpr = this->InnerProduct(to_ZZX(B[i]), BTilde[j], n);
+            norm = to_RR(this->InnerProduct(BTilde[j], BTilde[j], n));
+            
+            if(norm == to_RR(0)) {
+                cout << "Division by zero." << endl;
+                return to_RR(-1);
+            }//end-if
+                
+            div(mu, to_RR(innerpr), norm);            
+            this->Mult(mult, BTilde[j], mu, n);
+            sub(BTilde[i], BTilde[i], mult);            
+            
+        }//end-for
+        
+    }//end-for    
+    
+    RR norm1, norm2, normB, normBTilde;    
+    normB = to_RR(0);
+    normBTilde = to_RR(0);
+    cout << endl;
+    for(i = 0; i < m; i++) {
+        norm1 = this->Norm(to_ZZX(B[i]), n);
+        norm2 = this->Norm(BTilde[i], n);
+        if(norm1 > normB)
+            normB = norm1;
+        if(norm2 > normBTilde)
+            normBTilde = norm2;
+    }//end-for
+    cout << "Norm of B: " << normB << endl;
+    cout << "Norm of GS reduced basis: " << normBTilde << endl;
+    
+    return normBTilde;
+    
+}//end-GramSchmidtProcess() 
+
+// TODO:
+void Samplers::SampleD(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, RR c, RR norm) {
+    
+    int m;
+    m = B.length();
+    
+    if(sigma <= norm * log(m)/log(2)) {
+        cout << "\n[!] Sigma must be greater or equal to the norm of GSO B times log(m)." << endl;
+        return;
+    }//end-if        
+    
+};
+
+///* Sampling a lattice point from a Gaussian centered in zero */
+//ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX c, int k) {
+//        
+//    RR::SetOutputPrecision(to_long(precision));
+//
+//    Vec<ZZX> auxB, C;
+//    Vec<int> Z;
+//    ZZX C0, mult, sample;
+//    ZZ norm;
+//    RR d, sigma_i;
+//    int i, m, n, phi;
+//    
+//    m = B.length(); // m = m1 + m2 ~ 55
+//    n = pow(2, k); // n = 2^k
+//    phi = this->EulerPhiPowerOfTwo(k);
+//    
+//    Z.SetLength(m);
+//    C0.SetLength(n);
+//    mult.SetLength(n);
+//    sample.SetLength(n);
+//            
+//    auxB.SetLength(m);
+//    C.SetLength(m);
+//    for(i = 0; i < m; i++) {
+//        auxB[i].SetLength(n);
+//        C[i].SetLength(n);
+//        auxB[i] = to_ZZX(B[i]); // Basis conversion from ZZ_pX to ZZX (no changes are made in coefficients)
+//    }//end-for
+//    
+//    C[m-1] = c; // Center of the lattice        
+//    
+//    /* The inner product and norm operations are taken 
+//     * in the inner product space H */
+//    for(i = m-1; i > 0; i--) {
+//        
+//        norm = this->Norm(BTilde[i], n);
+//        
+//        if(norm == to_ZZ(0)) {
+//            cout << "\n[!] Error: division by zero ahead. Norm is zero. Aborting..." << endl;
+//            return to_ZZX(-1);
+//        }//end-if
+//                    
+//        // The new center for the discrete Gaussian
+//        div(d, to_RR(this->InnerProduct(C[i], BTilde[i], n)), to_RR(this->InnerProduct(BTilde[i], BTilde[i], n)));        
+//
+//        // And the new standard deviation
+//        div(sigma_i, sigma, to_RR(norm));
+//        
+//        // Problem: what if sigma_i < 1? Should be possible to sample from a discrete Gaussian distribution?
+//        // It can be a problem in GSO algorithm...
+//        if(sigma_i < 1) // If sigma is smaller than 1, there is no integer to be sampled
+//            sigma_i += 1;
+//
+//        this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d); // For Knuth-Yao algorithm                   
+//        Z[i] = this->KnuthYao(precision, tailcut, sigma_i); // Sampling from a different Gaussian each iteration
+//
+//        mul(mult, auxB[i], (long)(Z[i])); // Multiply Z[i] with all coefficients of auxB        
+//        sub(C[i-1], C[i], mult);
+//        
+//    }//end-for
+//    
+//    norm = this->Norm(BTilde[i], n);
+//
+//    if(norm == to_ZZ(0)) {
+//        cout << "\n[!] Error: division by zero ahead. Norm is zero. Aborting..." << endl;
+//        return to_ZZX(-1);
+//    }//end-if
+//
+//    div(d, to_RR(this->InnerProduct(C[i], BTilde[i], n)), to_RR(this->InnerProduct(BTilde[i], BTilde[i], n)));        
+//    div(sigma_i, sigma, to_RR(norm));
+//    
+//    if(sigma_i < 1)
+//        sigma_i += 1;
+//
+//    this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d);                   
+//    Z[i] = this->KnuthYao(precision, tailcut, sigma_i);
+//
+//    mul(mult, auxB[i], (long)(Z[i]));  
+//    sub(C0, C[i], mult);    
+//    sub(sample, c, C0);
+//    
+//    return sample;
+//    
+//}//end-GaussianSamplerFromLattice()
+
+///* Gram-Schmidt reduced basis generation */
+//void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<ZZ>& D, const Vec<ZZ_pX>& B, int n) {
+//    
+//    cout << "\n[*] Running FasterIsometricGSO: ";
+//    
+//    /* This implementation follows the Algorithm 3 
+//     * of (Lyubashevsky, and Prest, 2015) */
+//    
+//    ZZX isometry, mult;
+//    ZZX B1; // B[0] reduced modulo Phi_m(x)
+//    ZZX V; // Updated at each iteration
+//    ZZ CD, norm;
+//    int i, m;
+//    
+//    // Lengths:
+//    m = B.length();
+//    
+//    // Vectors:
+//    BTilde.SetLength(m);
+//    C.SetLength(m);
+//    D.SetLength(m);
+//    
+//    for(i = 0; i < m; i++)
+//        BTilde[i].SetMaxLength(n);
+//    
+//    // Polynomials:
+//    isometry.SetMaxLength(n);
+//    mult.SetMaxLength(n);
+//    B1.SetMaxLength(n);
+//    V.SetMaxLength(n);
+//    
+//    B1 = to_ZZX(B[0]);
+//    BTilde[0] = B1;
+//    V = B1;
+//    
+//    C[0] = this->InnerProduct(B1, to_ZZX(this->Isometry(B1)), n);
+//    norm = this->Norm(B1, n);
+//    mul(D[0], norm, norm);
+//    
+//    for(i = 0; i < m-1; i++) {
+//        
+//        if(D[i] == to_ZZ(0)) {
+//            cout << "\n[!] Error: division by zero ahead. Norm is zero. Aborting..." << endl;
+//            return;
+//        }//end-if
+//        
+//        div(CD, C[i], D[i]);
+//        isometry = this->Isometry(BTilde[i]);
+//        mul(mult, V, CD);
+//        sub(BTilde[i+1], isometry, mult); 
+//        mul(mult, isometry, CD);
+//        sub(V, V, mult);        
+//        C[i+1] = this->InnerProduct(B1, this->Isometry(BTilde[i+1]), n);        
+//        mul(D[i+1], CD, C[i]);
+//        sub(D[i+1], D[i], D[i+1]);
+//        
+//    }//end-for
+//    
+//    cout << "Pass!" << endl;
+//        
+//}//end-FasterIsometricGSO()
+
+void Samplers::Mult(ZZX& out, const ZZX& V, RR c, int n) {    
     
     RR v;    
-
+    
     if(!IsZero(V)) {
-        for(int i = 0; i < phi; i++) {
+        for(int i = 0; i < n; i++) {
             v = to_RR(V[i]);
-            V[i] = to_ZZ(v*c);            
+            out[i] = to_ZZ(v*c);
         }//end-for
     } else
-        V = to_ZZX(0);
-    
-    return V;
+        out = to_ZZX(0);
     
 }//end-Mult()
+
+RR Samplers::CoverageAreaZiggurat(RR sigma) {
+    
+    RR area, one;
+    int m;
+    
+    one = to_RR(1);    
+    m = this->X.length(); // Actually, m is the numbers of rectangles plus one
+    
+    area = to_RR(0);
+    for(int i = 1; i < m-1; i++) // Riemann sum
+        area += this->Probability(this->X[i], sigma, to_RR(0)) * (this->X[i] - this->X[i-1]);
+    
+    return area;
+    
+}//end-CoverageAreaZiggurat()

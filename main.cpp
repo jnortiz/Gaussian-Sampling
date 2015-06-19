@@ -28,8 +28,8 @@ int main(void) {
     h = 10;
     k = 3; // n = 2^k is the degree of polynomials in R and R_0
     q = 11; //q must be prime and congruent to 3 mod 8
-    m1 = 6;
-    m2 = 49; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+    m1 = 5;
+    m2 = 30; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
     r = ceil((double)(1 + (log(q)/log(3))));
     lambda = ceil(1 + (log(q)/log(2)));
 
@@ -64,7 +64,7 @@ int main(void) {
     RR c = to_RR(0); // Center of the distribution            
     int tailcut = 13;
     int precision = 107;
-    int nRectangles = 800; // Parameter of Ziggurat algorithm
+    int nRectangles = 63; // Parameter of Ziggurat algorithm
     int omega = precision; // Parameter of Ziggurat algorithm
     
     switch(action) {
@@ -77,7 +77,7 @@ int main(void) {
             }//end-if                
             
             Vec<int> ZigguratPoly, KnuthPoly;
-            int nSamples = 25000; // #coefficients in the polynomial
+            int nSamples = 8194; // #coefficients in the polynomial
             
             timestamp_t ts_start, ts_end;
             
@@ -103,8 +103,6 @@ int main(void) {
             hibe->Setup(h); // Setup algorithm with h = 10
             
             Vec<ZZX> BTilde;
-            Vec<ZZ> C;
-            Vec<ZZ> D;
             ZZX c; // Center of the lattice
             ZZ zero = to_ZZ(0);
             c.SetMaxLength(hibe->GetN());
@@ -115,15 +113,14 @@ int main(void) {
             // Lattice with random center
 //            random(c, hibe->GetN()); // n = 2^{k-1} = \phi(m)           
             
-            cout << "\n/* Basis A */" << endl;
+            cout << "\n/* Basis A (part of mpk) */" << endl;
             cout << hibe->GetA() << endl;
-            
-            hibe->GetSampler()->FasterIsometricGSO(BTilde, C, D, hibe->GetA(), hibe->GetN());
-            
+
+            hibe->GetSampler()->GramSchmidtProcess(BTilde, hibe->GetA(), hibe->GetN());
             cout << "\n/* Gram-Schmidt reduced basis */" << endl;
             cout << BTilde << endl;
             
-            cout << "\nSample from the lattice: \n" << hibe->GetSampler()->GaussianSamplerFromLattice(hibe->GetA(), BTilde, sigmaRR, precision, tailcut, c, k) << endl;            
+//            cout << "\nSample from the lattice: \n" << hibe->GetSampler()->GaussianSamplerFromLattice(hibe->GetA(), BTilde, sigmaRR, precision, tailcut, c, k) << endl;            
                         
             break;
         }

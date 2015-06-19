@@ -48,7 +48,6 @@ public:
     ZZ_pX GetU() const { return u; }
     Samplers* GetSampler() const { return sampler; }
     
-    
 private:
     /* Global parameters */
     double q;
