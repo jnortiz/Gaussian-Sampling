@@ -19,5 +19,5 @@ So far, we are considering only the HIBE class, which has four main algorithms: 
 </p>
 
 <p>
-In focus, we have the KeyDerive algorithm that requires samples from a discrete gaussian distribution and from lattices. This project includes the constant-time implementation of both Ziggurat (Buchmann et al., 2014) and Knuth-Yao (Roy, Vercauteren, and Verbauwhede, 2013) sampling algorithms. The Gaussian sampler from ideal lattices will follow the approaches of (Lyubashevsky, and Prest, 2015).
+In focus, we have the KeyDerive algorithm that requires samples from a discrete gaussian distribution and from lattices. This project includes the constant-time implementation of both Ziggurat (Buchmann et al., 2014) and Knuth-Yao (Roy, Vercauteren, and Verbauwhede, 2013) sampling algorithms. For Gaussian sampling in lattices, we follow the usual procedure to generate the Gram-Schmidt basis and the SampleD algorithm (Gentry et al., 2008).
 </p>
