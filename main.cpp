@@ -15,7 +15,7 @@ static timestamp_t get_timestamp() {
     struct timespec now;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
     return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
-}
+}//end-get_timestamp()
 
 int main(void) {
         
@@ -97,31 +97,52 @@ int main(void) {
             
             break;
         }
-        case 2: { // Still working on it...
+        case 2: {
             
             // Creating the basis needed to sample from the lattice
             hibe->Setup(h); // Setup algorithm with h = 10
             
             Vec<ZZX> BTilde;
-            ZZX c; // Center of the lattice
+            ZZX c, sample; // Center of the lattice
             ZZ zero = to_ZZ(0);
+            RR norm;
+            timestamp_t ts_start, ts_end;
+            
             c.SetMaxLength(hibe->GetN());
             
             for(int i = 0; i < hibe->GetN(); i++) // Lattice centered in zero
                 c[i] = zero;            
             
-            // Lattice with random center
-//            random(c, hibe->GetN()); // n = 2^{k-1} = \phi(m)           
-            
-            cout << "\n/* Basis A (part of mpk) */" << endl;
+            cout << "\n/* Basis A */" << endl;
             cout << hibe->GetA() << endl;
 
-            hibe->GetSampler()->GramSchmidtProcess(BTilde, hibe->GetA(), hibe->GetN());
+            ts_start = get_timestamp();            
+            norm = hibe->GetSampler()->GramSchmidtProcess(BTilde, hibe->GetA(), hibe->GetN());
+            ts_end = get_timestamp();            
+            
+            cout << "\n[!] Gram-Schmidt orthogonalization running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+            
             cout << "\n/* Gram-Schmidt reduced basis */" << endl;
             cout << BTilde << endl;
             
-//            cout << "\nSample from the lattice: \n" << hibe->GetSampler()->GaussianSamplerFromLattice(hibe->GetA(), BTilde, sigmaRR, precision, tailcut, c, k) << endl;            
-                        
+            sigmaRR = norm*log(hibe->GetM())/log(2) + 1;
+            cout << "\nSigma (lattice sampling): " << sigmaRR << endl;
+            
+            ts_start = get_timestamp();            
+            sample = hibe->GetSampler()->SampleD(hibe->GetA(), BTilde, sigmaRR, c, norm, precision, tailcut, hibe->GetN());
+            ts_end = get_timestamp();            
+
+            cout << "\n[!] SampleD running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+            
+            cout << "\nSample from the lattice: " << sample << endl;
+            
+            cout << "\nNorm of the sample: ";
+            
+            ZZ normZZ = to_ZZ(0);
+            for(int i = 0; i < hibe->GetN(); i++)
+                normZZ += sample[i]*sample[i];
+            cout << SqrRoot(to_RR(normZZ)) << endl;                                    
+            
             break;
         }
         default:
@@ -131,4 +152,4 @@ int main(void) {
     delete(hibe);
     return 0;
     
-}
+}//end-main()

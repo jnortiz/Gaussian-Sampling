@@ -20,7 +20,7 @@ using namespace NTL;
 class Samplers {
 public:
     
-    Samplers(int k, int q, const ZZ_pX& f);
+    Samplers(int q, const ZZ_pX& f);
     virtual ~Samplers();
     
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
@@ -28,8 +28,7 @@ public:
     void PolyGenerator(ZZX& b, int length, int q);
 
     RR GramSchmidtProcess(Vec<ZZX>& BTilde, const Vec<ZZ_pX>& B, int n);
-    void SampleD(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, RR c);
-    
+    ZZX SampleD(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, ZZX c, RR norm, int precision, int tailcut, int n);    
     
 private:
         
@@ -65,19 +64,15 @@ private:
     int EulerPhiPowerOfTwo(int k);
     ZZ InnerProduct(const ZZX& a, const ZZX& b, int n);
     RR Norm(const ZZX& b, int n);
+    RR NormOfBasis(const Vec<ZZX>& B, int m, int n);
     ZZX Isometry(ZZX& b);
     
     void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
     void Mult(ZZX& out, const ZZX& V, RR c, int n);
 
-    /* Testing a variant of Ziggurat algorithm */
+    /* For testing a variant of Ziggurat algorithm */
     RR CoverageAreaZiggurat(RR sigma);
     
-    /* Algorithm for generating small basis */
-    void FasterIsometricGSO(Vec<ZZX>& BTilde, Vec<ZZ>& C, Vec<ZZ>& D, const Vec<ZZ_pX>& B, int k);
-    /* Sampling from lattice that requires FasterIsometricGSO() algorithm */
-    ZZX GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX c, int k);    
-
 };
 
 #endif	/* SAMPLERS_H */
