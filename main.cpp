@@ -15,18 +15,19 @@ static timestamp_t get_timestamp() {
     struct timespec now;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
     return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
-}//end-get_timestamp()
+}
 
 int main(void) {
         
     int action = 2;
     
+    timestamp_t ts_start, ts_end;
     int h, k;
     double lambda;
     int m1, m2, q, r;
 
     h = 10;
-    k = 3; // n = 2^k is the degree of polynomials in R and R_0
+    k = 2; // n = 2^k is the degree of polynomials in R and R_0
     q = 11; //q must be prime and congruent to 3 mod 8
     m1 = 5;
     m2 = 30; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
@@ -78,9 +79,7 @@ int main(void) {
             
             Vec<int> ZigguratPoly, KnuthPoly;
             int nSamples = 8194; // #coefficients in the polynomial
-            
-            timestamp_t ts_start, ts_end;
-            
+                        
             ts_start = get_timestamp();            
             ZigguratPoly = hibe->GetSampler()->PolyGeneratorZiggurat(nSamples, nRectangles, sigmaRR, omega, precision, tailcut); // Coefficients, rectangles, sigma, omega and precision
             ts_end = get_timestamp();            
@@ -97,52 +96,72 @@ int main(void) {
             
             break;
         }
-        case 2: {
+        case 2: { // Still working on it...
             
             // Creating the basis needed to sample from the lattice
             hibe->Setup(h); // Setup algorithm with h = 10
             
             Vec<ZZX> BTilde;
-            ZZX c, sample; // Center of the lattice
-            ZZ zero = to_ZZ(0);
-            RR norm;
-            timestamp_t ts_start, ts_end;
+            Vec<ZZ_pX> out;                        
+            Vec<ZZ_pX> B; // Block isometric basis B
+            ZZX sample;
+            RR normBTilde;
+            int i, index, j, mn;
             
+            mn = hibe->GetM()*hibe->GetN();
+            B.SetLength(mn);
+            
+            index = 0;
+            for(i = 0; i < hibe->GetM(); i++) {
+                hibe->GetSampler()->rot(out, hibe->GetA()[i], hibe->GetN());
+                for(j = 0; j < hibe->GetN(); j++)
+                    B[index++] = out[j];                
+            }//end-for
+
+            cout << "\n/* Basis A (part of mpk) */" << endl;
+            cout << B << endl;
+            
+            ts_start = get_timestamp();                        
+            normBTilde = hibe->GetSampler()->BlockGSO(BTilde, B, hibe->GetM(), hibe->GetN());
+            ts_end = get_timestamp();            
+            
+            cout << "[!] BlockGSO running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+            cout << "[!] Norm of Gram-Schmidt reduced basis: " << normBTilde << endl;
+            cout << "\n/* Gram-Schmidt reduced basis of A */" << endl;
+            cout << BTilde << endl;
+                        
+            ts_start = get_timestamp();                        
+            normBTilde = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, hibe->GetN());
+            ts_end = get_timestamp();            
+
+            cout << "\n[!] Gram-Schmidt Process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+            cout << "[!] Norm of Gram-Schmidt reduced basis: " << normBTilde << endl;
+            cout << "\n/* Gram-Schmidt reduced basis of A */" << endl;
+            cout << BTilde << endl;
+            
+            ZZX c; // Center of the lattice
+            ZZ zero = to_ZZ(0);
             c.SetMaxLength(hibe->GetN());
             
             for(int i = 0; i < hibe->GetN(); i++) // Lattice centered in zero
                 c[i] = zero;            
+                        
+            sigmaRR = normBTilde*(log(hibe->GetM())/log(2)) + 1;
             
-            cout << "\n/* Basis A */" << endl;
-            cout << hibe->GetA() << endl;
-
-            ts_start = get_timestamp();            
-            norm = hibe->GetSampler()->GramSchmidtProcess(BTilde, hibe->GetA(), hibe->GetN());
-            ts_end = get_timestamp();            
+            ts_start = get_timestamp();    
+            sample = hibe->GetSampler()->GaussianSamplerFromLattice(B, BTilde, sigmaRR, precision, tailcut, c, hibe->GetN());            
+            ts_end = get_timestamp();    
             
-            cout << "\n[!] Gram-Schmidt orthogonalization running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-            
-            cout << "\n/* Gram-Schmidt reduced basis */" << endl;
-            cout << BTilde << endl;
-            
-            sigmaRR = norm*log(hibe->GetM())/log(2) + 1;
-            cout << "\nSigma (lattice sampling): " << sigmaRR << endl;
-            
-            ts_start = get_timestamp();            
-            sample = hibe->GetSampler()->SampleD(hibe->GetA(), BTilde, sigmaRR, c, norm, precision, tailcut, hibe->GetN());
-            ts_end = get_timestamp();            
-
-            cout << "\n[!] SampleD running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-            
+            cout << "\n[!] GaussianSampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
             cout << "\nSample from the lattice: " << sample << endl;
             
-            cout << "\nNorm of the sample: ";
+            ts_start = get_timestamp();    
+            sample = hibe->GetSampler()->SampleD(B, BTilde, sigmaRR, c, normBTilde, precision, tailcut, hibe->GetN());
+            ts_end = get_timestamp();            
             
-            ZZ normZZ = to_ZZ(0);
-            for(int i = 0; i < hibe->GetN(); i++)
-                normZZ += sample[i]*sample[i];
-            cout << SqrRoot(to_RR(normZZ)) << endl;                                    
-            
+            cout << "\n[!] SampleD running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+            cout << "\nSample from the lattice: " << sample << endl;
+                        
             break;
         }
         default:
@@ -152,4 +171,4 @@ int main(void) {
     delete(hibe);
     return 0;
     
-}//end-main()
+}

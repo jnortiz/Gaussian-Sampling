@@ -29,6 +29,12 @@ public:
 
     RR GramSchmidtProcess(Vec<ZZX>& BTilde, const Vec<ZZ_pX>& B, int n);
     ZZX SampleD(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, ZZX c, RR norm, int precision, int tailcut, int n);    
+
+    /* Algorithm for generating small basis */
+    ZZX GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n);
+    RR BlockGSO(Vec<ZZX>& BTilde, const Vec<ZZ_pX>& B, int m, int n);
+    void FasterIsometricGSO(Vec<ZZX>& BTilde, const Vec<ZZ_pX>& B);
+    void rot(Vec<ZZ_pX>& out, const ZZ_pX& b, int n);
     
 private:
         
@@ -65,6 +71,8 @@ private:
     ZZ InnerProduct(const ZZX& a, const ZZX& b, int n);
     RR Norm(const ZZX& b, int n);
     RR NormOfBasis(const Vec<ZZX>& B, int m, int n);
+    RR NormOfBasis(const Vec<ZZ_pX>& B, int m, int n);
+    ZZ_pX Isometry(ZZ_pX& b);
     ZZX Isometry(ZZX& b);
     
     void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
