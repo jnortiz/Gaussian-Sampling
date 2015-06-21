@@ -122,19 +122,19 @@ int main(void) {
             cout << B << endl;
             
             ts_start = get_timestamp();                        
-            normBTilde = hibe->GetSampler()->BlockGSO(BTilde, B, hibe->GetM(), hibe->GetN());
+            normBTilde = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, hibe->GetN());
             ts_end = get_timestamp();            
             
-            cout << "[!] BlockGSO running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+            cout << "\n[!] Gram-Schmidt Process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
             cout << "[!] Norm of Gram-Schmidt reduced basis: " << normBTilde << endl;
             cout << "\n/* Gram-Schmidt reduced basis of A */" << endl;
             cout << BTilde << endl;
                         
             ts_start = get_timestamp();                        
-            normBTilde = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, hibe->GetN());
+            normBTilde = hibe->GetSampler()->BlockGSO(BTilde, B, hibe->GetM(), hibe->GetN());
             ts_end = get_timestamp();            
 
-            cout << "\n[!] Gram-Schmidt Process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+            cout << "[!] BlockGSO running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
             cout << "[!] Norm of Gram-Schmidt reduced basis: " << normBTilde << endl;
             cout << "\n/* Gram-Schmidt reduced basis of A */" << endl;
             cout << BTilde << endl;
