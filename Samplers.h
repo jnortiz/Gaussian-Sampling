@@ -29,16 +29,15 @@ public:
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
     Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma, RR c);
 
-    void Rot(Vec<ZZ_pX>& A, const Vec<ZZ_pX>& a, int m, int n);
-    void rot(Vec<ZZ_pX>& out, const ZZ_pX& b, int n);
+    void Rot(Vec<ZZX>& A, const Vec<ZZ_pX>& a, int m, int n);
 
     /* Algorithm for generating the Gram-Schmidt reduced basis */
-    RR BlockGSO(mat_RR& BTilde, const Vec<ZZ_pX>& B, int m, int n, int precision);
-    RR BlockGSO(Vec<ZZX>& BTilde, const Vec<ZZ_pX>& B, int m, int n);
+    RR BlockGSO(mat_RR& BTilde, const Vec<ZZX>& B, int m, int n, int precision);
+    RR BlockGSO(Vec<ZZX>& BTilde, const Vec<ZZX>& B, int m, int n);
     
     /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c}*/
-    ZZX GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n);
-    ZZX GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n);
+    ZZX GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n);
+    ZZX GaussianSamplerFromLattice(const Vec<ZZX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n);
     
 private:
         
@@ -84,16 +83,16 @@ private:
     RR NormOfBasis(const Vec<ZZ_pX>& B, int m, int n);
     RR NormOfBasis(const mat_RR& B, int m, int n);
     
-    ZZ_pX Isometry(ZZ_pX& b);
+    ZZX Isometry(ZZ_pX& b, int n);
     vec_RR Isometry(vec_RR& b, int n);
-    ZZX Isometry(ZZX& b);
+    ZZX Isometry(ZZX& b, int n);
     
     void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
     
     void Mult(ZZX& out, const ZZX& V, RR c, int n);
     void Mult(vec_RR& out, const vec_RR& V, RR c, int n);
 
-//    void rot(Vec<ZZ_pX>& out, const ZZ_pX& b, int n);
+    void rot(Vec<ZZX>& out, const ZZ_pX& b, int n);
     void rot(mat_RR& out, const vec_RR& b, int n);
     void rot(Vec<ZZX>& out, const ZZX& b, int n);
 

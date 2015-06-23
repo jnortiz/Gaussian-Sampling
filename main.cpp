@@ -19,7 +19,7 @@ static timestamp_t get_timestamp() {
 
 int main(void) {
         
-    int action = 3;
+    int action = 2;
     
     timestamp_t ts_start, ts_end;
     int h, k;
@@ -102,7 +102,7 @@ int main(void) {
             hibe->Setup(h); // Setup algorithm with h = 10
             
             Vec<ZZX> BTilde;
-            Vec<ZZ_pX> B; // Block isometric basis B
+            Vec<ZZX> B; // Block isometric basis B
             ZZX sample;
             RR normBTilde;
             
@@ -110,7 +110,7 @@ int main(void) {
             
             cout << "\n/* Basis A (part of mpk) */" << endl;
             cout << B << endl;
-            
+                        
             ts_start = get_timestamp();                        
             normBTilde = hibe->GetSampler()->BlockGSO(BTilde, B, hibe->GetM(), hibe->GetN());
             ts_end = get_timestamp();            
@@ -147,14 +147,14 @@ int main(void) {
             cout << "\n[!] Setup running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
             
             mat_RR BTilde;
-            Vec<ZZ_pX> B; // Block isometric basis B
+            Vec<ZZX> B; // Block isometric basis B
             ZZX sample;
             RR normBTilde;
 
-            hibe->GetSampler()->Rot(B, hibe->GetA(), hibe->GetM(), hibe->GetN());
-            
             cout << "\n/* Vector a (part of mpk) */" << endl;
             cout << hibe->GetA() << endl;
+            
+            hibe->GetSampler()->Rot(B, hibe->GetA(), hibe->GetM(), hibe->GetN());            
             
             cout << "\n/* Expansion of vector a (part of mpk) */" << endl;            
             cout << B << endl;
@@ -165,16 +165,7 @@ int main(void) {
 
             cout << "\n[!] BlockGSO running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
             cout << "\n[!] Norm of Gram-Schmidt reduced basis: " << normBTilde << endl;
-            
-            cout << "\n/* Gram-Schmidt reduced basis of A */" << endl;            
-            for(int i = 0; i < hibe->GetM()*hibe->GetN(); i++) {
-                cout << BTilde[i];
-                if(i % hibe->GetN() == 0 && i != 0)
-                    cout << endl;
-            }//end-for
-            
-            cout << endl;
-            
+                        
             ZZX c; // Center of the lattice
             ZZ zero = to_ZZ(0);
             c.SetMaxLength(hibe->GetN());
@@ -184,13 +175,12 @@ int main(void) {
                         
             sigmaRR = normBTilde*(log(hibe->GetN())/log(2)) + 1;
             
-            /* WARNING: implementation not finished yet. It contains errors :-( */            
-//            ts_start = get_timestamp();    
-//            sample = hibe->GetSampler()->GaussianSamplerFromLattice(B, BTilde, sigmaRR, precision, tailcut, c, hibe->GetN());            
-//            ts_end = get_timestamp();    
-//            
-//            cout << "\n[!] GaussianSampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-//            cout << "\nSample from the lattice: " << sample << endl;
+            ts_start = get_timestamp();    
+            sample = hibe->GetSampler()->GaussianSamplerFromLattice(B, BTilde, sigmaRR, precision, tailcut, c, hibe->GetN());            
+            ts_end = get_timestamp();    
+            
+            cout << "\n[!] GaussianSampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+            cout << "\nSample from the lattice: " << sample << endl;
                         
             break;
         }
