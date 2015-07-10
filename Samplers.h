@@ -44,6 +44,8 @@ private:
         
     /* Knuth-Yao attributes */
     Vec< Vec<int> > P;
+    Vec<int> start;
+    Vec<int> end;
     
     /* Ziggurat attributes */
     Vec<RR> X;

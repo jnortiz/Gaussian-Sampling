@@ -76,6 +76,7 @@ int main(void) {
         return -1;
     }
     
+    /* Parameter set from (Roy et al., 2013). That depends on the cryptographic system requirements */
     RR sigmaRR = to_RR(3.195); // Standard deviation
     RR c = to_RR(0); // Center of the distribution            
     int tailcut = 13;
@@ -91,22 +92,15 @@ int main(void) {
             averageZiggurat = 0.0;
             averageKnuthYao = 0.0;
             
-            int i, nIterations = 1;
+            int i, nIterations = 10;
             
             Vec<int> ZigguratPoly, KnuthPoly;
-            int nSamples = 1000; // #coefficients in the polynomial
+            int nSamples = 1024; // #coefficients in the polynomial
             
             for(i = 0; i < nIterations; i++) {
 
                 HIBE *hibe = new HIBE(q, m1, m2, k); // Parameters required only in Gaussian sampling from lattices  
-
-                /* Parameter set from (Roy et al., 2013). That depends on the cryptographic system requirements */
-
-                if(sigmaRR*to_RR(tailcut) > power2_RR(sizeof(int)*8+1)-1) {
-                    cout << "Error! This distribution can not be simulated. Aborting..." << endl;
-                    return -1;
-                }//end-if                
-
+                
                 cout << endl;
                 
                 ts_start = get_timestamp();            
@@ -115,7 +109,7 @@ int main(void) {
 
                 averageZiggurat += (ts_end - ts_start);
                 
-//                cout << ZigguratPoly << endl;
+                cout << ZigguratPoly << endl;
 
                 ts_start = get_timestamp();                        
                 KnuthPoly = hibe->GetSampler()->PolyGeneratorKnuthYao(nSamples, precision, tailcut, sigmaRR, c); // Coefficients, precision, tailcut, and sigma
@@ -227,13 +221,14 @@ int main(void) {
             
             cout << "\n[!] Setup running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
 
+            delete(hibe);
+            
             break;
         }
         default:
             break;            
     }//end-switch
     
-//    delete(hibe);
     return 0;
     
 }

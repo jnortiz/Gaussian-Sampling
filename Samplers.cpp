@@ -376,7 +376,7 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma, RR c) {
     d = 0; //Distance
     hit = 0;
     invalidSample = 3*bound;
-    pNumRows = this->P.length();
+    pNumRows = this->P.length(); // Precision
     pNumCols = 2*bound+1;    
     
     S = 0;
@@ -386,7 +386,7 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma, RR c) {
         r = RandomBits_long(1); // Random choice between 0 and 1
         d = 2*d + r; // Distance calculus
         
-        for(col = 0; col < pNumCols; col++) {
+        for(col = this->start[row]; col < this->end[row]; col++) {
             
             d = d - this->P[row][col];
             
@@ -399,6 +399,7 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma, RR c) {
             hit += (enable & !hit);
                             
         }//end-for
+        
     }//end-for
     
     /* Note: the "col" value is in [0, 2*bound]. So, the invalid sample must be 
@@ -415,35 +416,19 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma, RR c) {
  * [-tailcut*\floor(sigma), +tailcut*\floor(sigma)] */
 void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c) {
     
-    int bits, bound, center;
-    bound = tailcut*to_int(sigma);
-
-    /* For now on, the probability matrix has only the random bits required in 
-     average case, e.g. H + 2, with H being the entropy of the distribution */
-    RR entropy, probability;
-    center = to_int(c);
-    entropy = to_RR(0);
-
-    // Entropy H calculus
-    for(int i = (center-bound); i <= (center+bound); i++) {
-        probability = this->Probability(to_RR(i), sigma, c);
-        entropy += probability * (log(probability)/log(2));        
-    }//end-for
-    
-    entropy = -entropy;
-    bits = to_int(entropy + 2);
-    bits = precision;
-    
     RR::SetPrecision(to_long(precision));
 
     Vec< Vec<int> > auxP;
+    Vec<int> auxStart, auxEnd;
+    
     // The random variable consists of elements in [-tailcut*sigma, tailcut*sigma]
-    int i, upperBound;
+    int i, j, k, bound, center, pNumCols, pNumRows, upperBound;
     RR probOfX;
     
+    bound = tailcut*to_int(sigma);
     center = to_int(c);
-    
-    auxP.SetLength(bits);
+       
+    auxP.SetLength(precision);
     for(i = 0; i < auxP.length(); i++)
         auxP[i].SetLength(2*bound+1);
 
@@ -451,37 +436,38 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
     i = 2*bound;    
     for(int x = (center - bound); x <= upperBound, i >= 0; x++, i--) {
         probOfX = Probability(to_RR(x), sigma, c);
-        BinaryExpansion(auxP, probOfX, bits, i);
+        BinaryExpansion(auxP, probOfX, precision, i);
     }//end-for
        
     this->P = auxP;
     
     // Uncomment this line if you want to preview the probability matrix P
-    this->PrintMatrix("Probability matrix", this->P);
+//    this->PrintMatrix("Probability matrix", this->P);
     
-//    RR accProb = to_RR(0);    
-//    int flag, counter;
-//    counter = 0;
-//    
-//    for(int i = 0; i < P.length(); i++) {
-//        for(int j = 0; j < P[0].length(); j++) {
-//            if(P[i][j] == 1) {
-//                flag = 1;
-//                for(int k = i-1; k >= 0; k--) {
-//                    if(P[k][j] == 1)
-//                        flag = 0;                    
-//                }//end-for
-//                if(flag) {
-//                    counter++;
-//                    accProb += this->Probability(to_RR(j - bound + center), sigma, c);                
-//                }//end-if
-//            }//end-if
-//        }//end-if
-//    }//end-if
-//    
-//    cout << "\nCumulative probability: " << accProb << endl;
-//    cout << "Counter: " << counter << "\n" << endl;    
+    pNumCols = this->P[0].length();
+    pNumRows = this->P.length();
     
+    auxStart.SetLength(pNumRows);
+    auxEnd.SetLength(pNumRows);
+    
+    // Computing in which position the non-zero values in P start and end 
+    for(i = 0; i < pNumRows; i++) {
+        
+        auxStart[i] = pNumCols-1;
+        
+        for(j = 0; j < pNumCols; j++)
+            if(this->P[i][j] == 1) {
+                auxStart[i] = j;
+                break;
+            }//end-if
+        
+        auxEnd[i] = pNumCols-j;
+        
+    }//end-for
+    
+    this->start = auxStart;
+    this->end = auxEnd;
+                
 }//end-BuildProbabilityMatrix()
 
 /* Method for computing the binary expansion of a given probability in [0, 1] */
