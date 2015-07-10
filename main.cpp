@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <math.h>
+#include <NTL/RR.h>
 #include "HIBE.h"
 
 typedef unsigned long long timestamp_t;
@@ -19,18 +20,34 @@ static timestamp_t get_timestamp() {
 
 int main(void) {
         
-    int action = 2;
+    int action = 1;
     
     timestamp_t ts_start, ts_end;
     int h, k;
     double lambda;
     int m1, m2, q, r;
 
+    /* 128-bit security level */
     h = 10;
-    k = 2; // n = 2^k is the degree of polynomials in R and R_0
-    q = 11; //q must be prime and congruent to 3 mod 8
-    m1 = 5;
-    m2 = 30; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+    k = 7; // n = 2^k is the degree of polynomials in R and R_0
+    q = 2083; //q must be prime and congruent to 3 mod 8
+    m1 = 13;
+    m2 = 170; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+
+    /* Intermediate parameter set */
+//    h = 10;
+//    k = 6; // n = 2^k is the degree of polynomials in R and R_0
+//    q = 1019; //q must be prime and congruent to 3 mod 8
+//    m1 = 11;
+//    m2 = 122; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+    
+    // Toy parameter set:
+//    h = 10;
+//    k = 2; // n = 2^k is the degree of polynomials in R and R_0
+//    q = 11; //q must be prime and congruent to 3 mod 8
+//    m1 = 5;
+//    m2 = 30; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+
     r = ceil((double)(1 + (log(q)/log(3))));
     lambda = ceil(1 + (log(q)/log(2)));
 
@@ -58,8 +75,6 @@ int main(void) {
         cout << "m2 must be greater or equal to lambda times m1.\n";
         return -1;
     }
-
-    HIBE *hibe = new HIBE(q, m1, m2, k);    
     
     RR sigmaRR = to_RR(3.195); // Standard deviation
     RR c = to_RR(0); // Center of the distribution            
@@ -70,94 +85,155 @@ int main(void) {
     
     switch(action) {
         case 1: {
-            /* Parameter set from (Roy et al., 2013). That depends on the cryptographic system requirements */
+
+            timestamp_t averageZiggurat, averageKnuthYao;
             
-            if(sigmaRR*to_RR(tailcut) > power2_RR(sizeof(int)*8+1)-1) {
-                cout << "Error! This distribution can not be simulated. Aborting..." << endl;
-                return -1;
-            }//end-if                
+            averageZiggurat = 0.0;
+            averageKnuthYao = 0.0;
+            
+            int i, nIterations = 1;
             
             Vec<int> ZigguratPoly, KnuthPoly;
-            int nSamples = 8194; // #coefficients in the polynomial
-                        
-            ts_start = get_timestamp();            
-            ZigguratPoly = hibe->GetSampler()->PolyGeneratorZiggurat(nSamples, nRectangles, sigmaRR, omega, precision, tailcut); // Coefficients, rectangles, sigma, omega and precision
-            ts_end = get_timestamp();            
-                        
-            cout << "[!] Ziggurat running time for " << nSamples << " samples: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-            cout << ZigguratPoly << endl;
+            int nSamples = 1000; // #coefficients in the polynomial
             
-            ts_start = get_timestamp();                        
-            KnuthPoly = hibe->GetSampler()->PolyGeneratorKnuthYao(nSamples, precision, tailcut, sigmaRR, c); // Coefficients, precision, tailcut, and sigma
-            ts_end = get_timestamp();            
+            for(i = 0; i < nIterations; i++) {
+
+                HIBE *hibe = new HIBE(q, m1, m2, k); // Parameters required only in Gaussian sampling from lattices  
+
+                /* Parameter set from (Roy et al., 2013). That depends on the cryptographic system requirements */
+
+                if(sigmaRR*to_RR(tailcut) > power2_RR(sizeof(int)*8+1)-1) {
+                    cout << "Error! This distribution can not be simulated. Aborting..." << endl;
+                    return -1;
+                }//end-if                
+
+                cout << endl;
+                
+                ts_start = get_timestamp();            
+                ZigguratPoly = hibe->GetSampler()->PolyGeneratorZiggurat(nSamples, nRectangles, sigmaRR, omega, precision, tailcut); // Coefficients, rectangles, sigma, omega and precision
+                ts_end = get_timestamp();            
+
+                averageZiggurat += (ts_end - ts_start);
+                
+//                cout << ZigguratPoly << endl;
+
+                ts_start = get_timestamp();                        
+                KnuthPoly = hibe->GetSampler()->PolyGeneratorKnuthYao(nSamples, precision, tailcut, sigmaRR, c); // Coefficients, precision, tailcut, and sigma
+                ts_end = get_timestamp();            
+
+                averageKnuthYao += (ts_end - ts_start);
+                
+                cout << KnuthPoly << endl;
+
+                delete(hibe);
             
-            cout << "[!] Knuth-Yao running time for " << nSamples << " samples: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-            cout << KnuthPoly << endl;
+            }//end-for
             
+            cout << "\nZiggurat average running time for " << nIterations << " iterations: " << (float)(averageZiggurat/((float)(nIterations)*1000000000.0)) << endl;
+            cout << "Knuth-Yao average running time for " << nIterations << " iterations: " << (float)(averageKnuthYao/((float)(nIterations)*1000000000.0)) << endl;
             break;
         }
         case 2: {
             
-            mat_RR BTilde;
-            Vec<ZZX> A; // Block isometric basis A
+            timestamp_t avgSetup, avgBlockGSO, avgGaussianSampler;
+            
+            avgSetup = 0.0;
+            avgBlockGSO = 0.0;
+            avgGaussianSampler = 0.0;
+            
+            Vec<ZZX> BTilde;
+            Vec<ZZ_pX> out;                        
+            Vec<ZZ_pX> B;            
             ZZX c, sample;
             RR normBTilde;
-            ZZ zero;  
+            ZZ zero;            
+            int i, index, j, it, nIterations;
             
-            c.SetMaxLength(hibe->GetN());
-            zero = to_ZZ(0);
+            zero = to_ZZ(0);            
+            nIterations = 100;
             
-            for(int i = 0; i < hibe->GetN(); i++) // Center of distribution D_{\Lambda, \sigma, c}
-                c[i] = zero;            
-            
-            /* Basis generation phase - (Mochetti, and Dahab, 2014) and (Stehlé et al., 2009) */
-            ts_start = get_timestamp();
-            hibe->Setup(h);
-            ts_end = get_timestamp();            
+            for(it = 0; it < nIterations; it++) {
+                
+                HIBE *hibe = new HIBE(q, m1, m2, k);    
 
-            cout << "\n[!] Setup running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-            
-            cout << "\n/* Vector \\hat{a} generated by Setup algorithm */" << endl;
-            cout << hibe->GetA() << endl;
-            
-            /* Rot_f(\hat{a}) - Expansion of vector \hat{a} into a matrix \*/
-            hibe->GetSampler()->Rot(A, hibe->GetA(), hibe->GetM(), hibe->GetN());            
-            
-            cout << "\n/* Expansion of vector \\hat{a} into A */" << endl;            
-            cout << A << endl;
-            
-            /* Orthogonalization of block isometric basis A - (Lyubashevsky, and Prest, 2015), Algorithm 5 */
-            ts_start = get_timestamp();
-            normBTilde = hibe->GetSampler()->BlockGSO(BTilde, A, hibe->GetM(), hibe->GetN(), precision);
-            ts_end = get_timestamp();            
+                ts_start = get_timestamp();                        
+                hibe->Setup(h);
+                ts_end = get_timestamp();   
 
-            cout << "\n[!] BlockGSO running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+                avgSetup += (ts_end - ts_start);
+                cout << "\n[!] Setup running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+                
+                B.SetLength(hibe->GetM()*hibe->GetN());
+                
+                /* Expansion of vector \tilde{a} into basis A */
+                index = 0;
+                for(i = 0; i < hibe->GetM(); i++) {
+                    hibe->GetSampler()->rot(out, hibe->GetA()[i], hibe->GetN());
+                    for(j = 0; j < hibe->GetN(); j++)
+                        B[index++] = out[j];                
+                }//end-for
+
+                ts_start = get_timestamp();                        
+                normBTilde = hibe->GetSampler()->BlockGSO(BTilde, B, hibe->GetM(), hibe->GetN());
+                ts_end = get_timestamp();            
+
+                cout << "\n[!] BlockGSO running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+                avgBlockGSO += (ts_end - ts_start);
+                
+                cout << "[!] Norm of Gram-Schmidt reduced basis: " << normBTilde << endl;
+
+                c.SetMaxLength(hibe->GetN());
+                for(i = 0; i < hibe->GetN(); i++) // Lattice centered in zero
+                    c[i] = zero;            
+
+                sigmaRR = normBTilde*(log(hibe->GetN())/log(2)) + 1;
+
+                ts_start = get_timestamp();    
+                sample = hibe->GetSampler()->GaussianSamplerFromLattice(B, BTilde, sigmaRR, precision, tailcut, c, hibe->GetN());            
+                ts_end = get_timestamp();    
+
+                cout << "\n[!] GaussianSampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+                avgGaussianSampler += (ts_end - ts_start);
+
+                cout << "\nSample from the lattice: " << sample << endl;
+                cout << endl;
+                
+                delete(hibe);
+                
+            }//end-for
             
-            // Uncomment this block if you wanna a preview of the Gram-Schmidt reduced basis
-            /*cout << "\n[!] Norm of Gram-Schmidt reduced basis: " << normBTilde << endl;            
-            for(int i = 0; i < hibe->GetM()*hibe->GetN(); i++) {
-                cout << BTilde[i];
-                if(i != 0 && i % hibe->GetM())
-                    cout << endl;
-            }//end-for*/
+            cout << "\n avgSetup: " << avgSetup << endl;
+            cout << "\n avgBlockGSO: " << avgBlockGSO << endl;
+            cout << "\n avgGaussianSampler: " << avgGaussianSampler << endl;
+
+            cout << "Setup running time: " << (float)(avgSetup/1000000000.0) << " s."  << endl;
+            cout << "Block-GSO running time: " << (float)(avgBlockGSO/1000000000.0) << " s." << endl;
+            cout << "Gaussian-Sampler running time: " << (float)(avgGaussianSampler/1000000000.0) << " s. " << endl;
             
-            sigmaRR = normBTilde*(log(hibe->GetN())/log(2)) + 1;
-            
-            /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c} - (Lyubashevsky, and Prest, 2015), Algorithm 8 */
-            ts_start = get_timestamp();    
-            sample = hibe->GetSampler()->GaussianSamplerFromLattice(A, BTilde, sigmaRR, precision, tailcut, c, hibe->GetN());            
-            ts_end = get_timestamp();    
-            
-            cout << "\n[!] GaussianSampler running time: " << (float)((ts_end - ts_start)/1000000.0) << " ms." << endl;
-            cout << "\nSample from the lattice: " << sample << endl;
+            cout << "Setup average running time: " << (float)(avgSetup/((float)(nIterations)*1000000000.0)) << " s."  << endl;
+            cout << "Block-GSO average running time: " << (float)(avgBlockGSO/((float)(nIterations)*1000000000.0)) << " s." << endl;
+            cout << "Gaussian-Sampler average running time: " << (float)(avgGaussianSampler/((float)(nIterations)*1000000000.0)) << " s. " << endl;
                         
+            break;
+        }
+        case 3: {
+            
+            HIBE *hibe = new HIBE(q, m1, m2, k);    
+            
+            // Creating the basis needed to sample from the lattice
+            ts_start = get_timestamp();                        
+            hibe->Setup(h); // Setup algorithm with h = 10
+            ts_end = get_timestamp();   
+            
+            cout << "\n[!] Setup running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+
             break;
         }
         default:
             break;            
     }//end-switch
     
-    delete(hibe);
+//    delete(hibe);
     return 0;
     
 }
