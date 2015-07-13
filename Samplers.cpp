@@ -127,7 +127,7 @@ Vec<int> Samplers::PolyGeneratorZiggurat(int dimension, int m, RR sigma, int ome
     do {
         samplesGen = 0;
         for(int i = 0; i < dimension; i++) {
-            polynomial[i] = this->Ziggurat(m, sigma, omega);
+            polynomial[i] = this->Ziggurat(m, n, sigma, omega);
             if(polynomial[i] <= bound)
                 samplesGen++;
         }//end-for
@@ -142,8 +142,11 @@ Vec<int> Samplers::PolyGeneratorZiggurat(int dimension, int m, RR sigma, int ome
 
 /* Algorithm for sampling from discrete distribution using rejection method.
  * It does not avoid Rho function computation */
-int Samplers::Ziggurat(int m, RR sigma, int omega) {
+int Samplers::Ziggurat(int m, int n, RR sigma, int omega) {
         
+    // Precision of floating point operations
+    RR::SetPrecision(n);    
+
     // See below to explanation about this comments
     ZZ powerOmega;
     int curve;
@@ -193,7 +196,7 @@ int Samplers::Ziggurat(int m, RR sigma, int omega) {
     
     return S;    
     
-}//end-ZigguratO()
+}//end-Ziggurat()
 
 /* DZCreatePartition defines the x and y axes of rectangles in the Gaussian distribution */
 void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail) {
@@ -205,7 +208,7 @@ void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail) {
      */
     
     /* Output precision setup */
-    RR::SetOutputPrecision((long)n);
+    RR::SetPrecision((long)n);
     
     // The approximation error must be less than 2^{-n}
     RR statDistance = power2_RR(-((long)n));
@@ -354,7 +357,7 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
     
     for(int i = 0; i < dimension; i++) {
         do{
-            sample = this->KnuthYao(precision, tailcut, sigma, c);
+            sample = this->KnuthYao(tailcut, sigma, c);
         } while(sample >= (center + bound) || sample <= (center - bound));                
         polynomial.put(i, sample);
     }//end-for
@@ -364,20 +367,19 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
 }//end-PolyGeneratorKnuthYao()
 
 /* Knuth-Yao algorithm to obtain a sample from the discrete Gaussian */
-int Samplers::KnuthYao(int precision, int tailcut, RR sigma, RR c) {
+int Samplers::KnuthYao(int tailcut, RR sigma, RR c) {
 
-    RR::SetPrecision(to_long(precision));
-    
-    int bound, center, col, d, invalidSample, pNumRows, pNumCols, r, S;
+    int bound, center, col, d, invalidSample, pNumRows, pNumCols, r, S, signal;
     unsigned enable, hit;
     
     bound = tailcut*to_int(sigma);
     center = to_int(c);
     d = 0; //Distance
     hit = 0;
-    invalidSample = 3*bound;
+    signal = 1 - 2*RandomBits_long(1); // Sample a random signal s    
+    invalidSample = bound+1;
     pNumRows = this->P.length(); // Precision
-    pNumCols = 2*bound+1;    
+    pNumCols = this->P[0].length();    
     
     S = 0;
     
@@ -386,7 +388,7 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma, RR c) {
         r = RandomBits_long(1); // Random choice between 0 and 1
         d = 2*d + r; // Distance calculus
         
-        for(col = this->start[row]; col < this->end[row]; col++) {
+        for(col = this->begin[row]; col < pNumCols; col++) {
             
             d = d - this->P[row][col];
             
@@ -402,11 +404,11 @@ int Samplers::KnuthYao(int precision, int tailcut, RR sigma, RR c) {
         
     }//end-for
     
-    /* Note: the "col" value is in [0, 2*bound]. So, the invalid sample must be 
-     * greater than 2*bound. */
-    S = S % invalidSample;
-    S -= bound;
-    S += center;
+    /* Note: the "col" value is in [0, bound]. So, the invalid sample must be 
+     * greater than bound. */
+    S %= invalidSample;
+    S = S - bound + center;
+    S *= signal;
     
     return S;
     
@@ -419,26 +421,27 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
     RR::SetPrecision(to_long(precision));
 
     Vec< Vec<int> > auxP;
-    Vec<int> auxStart, auxEnd;
+    Vec<int> auxBegin;
     
-    // The random variable consists of elements in [-tailcut*sigma, tailcut*sigma]
-    int i, j, k, bound, center, pNumCols, pNumRows, upperBound;
-    RR probOfX;
+    // The random variable consists of elements in [c-tailcut*sigma, c+tailcut*sigma]
+    int i, j, bound, pNumCols, pNumRows;
+    RR probOfX;    
     
     bound = tailcut*to_int(sigma);
-    center = to_int(c);
        
     auxP.SetLength(precision);
     for(i = 0; i < auxP.length(); i++)
-        auxP[i].SetLength(2*bound+1);
+        auxP[i].SetLength(bound+1);
 
-    upperBound = center + bound;
-    i = 2*bound;    
-    for(int x = (center - bound); x <= upperBound, i >= 0; x++, i--) {
-        probOfX = Probability(to_RR(x), sigma, c);
+    div(probOfX, Probability(to_RR(0) + c, sigma, c), to_RR(2));
+    BinaryExpansion(auxP, probOfX, precision, bound);
+    
+    i = bound-1;
+    for(int x = 1; x <= bound, i >= 0; x++, i--) {
+        probOfX = Probability(to_RR(x) + c, sigma, c);
         BinaryExpansion(auxP, probOfX, precision, i);
     }//end-for
-       
+    
     this->P = auxP;
     
     // Uncomment this line if you want to preview the probability matrix P
@@ -447,26 +450,22 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
     pNumCols = this->P[0].length();
     pNumRows = this->P.length();
     
-    auxStart.SetLength(pNumRows);
-    auxEnd.SetLength(pNumRows);
+    auxBegin.SetLength(pNumRows);
     
     // Computing in which position the non-zero values in P start and end 
     for(i = 0; i < pNumRows; i++) {
         
-        auxStart[i] = pNumCols-1;
+        auxBegin[i] = pNumCols-1;
         
         for(j = 0; j < pNumCols; j++)
             if(this->P[i][j] == 1) {
-                auxStart[i] = j;
+                auxBegin[i] = j;
                 break;
             }//end-if
         
-        auxEnd[i] = pNumCols-j;
-        
     }//end-for
     
-    this->start = auxStart;
-    this->end = auxEnd;
+    this->begin = auxBegin;
                 
 }//end-BuildProbabilityMatrix()
 
@@ -490,225 +489,49 @@ void Samplers::BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precis
             
 }//end-BinaryExpansion()
 
-/* Generation of a length-degree polynomial modulo q */
-void Samplers::PolyGenerator(ZZX& b, int length, int q) {
-    b.SetLength(length);
-    for(int i = 0; i < length; i++)
-        b[i] = NTL::RandomBnd(q);
-}//end-PolyGenerator()
+ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n) {
 
-/* Norm of a polynomial */
-RR Samplers::Norm(const ZZX& b, int n) {
-    
-    ZZ norm = to_ZZ(0);
+    // Precision of floating point operations
+    RR::SetPrecision(precision);    
 
-    for(int i = 0; i < n; i++)
-        norm += b[i]*b[i];
-    
-    return SqrRoot(to_RR(norm));
-        
-}//end-Norm()
-
-/* Computation of the inner product as matrix multiplication */
-ZZ Samplers::InnerProduct(const ZZX& a, const ZZX& b, int n) {
-    
-    ZZ innerp = to_ZZ(0);
-
-    for(int i = 0; i < n; i++)
-        innerp += a[i]*b[i];
-    
-    return innerp;    
-    
-}//end-InnerProduct()
-
-/* Computation of Euler's phi function for m = 2^k, p = 2 */
-int Samplers::EulerPhiPowerOfTwo(int k) {
-    return pow(2.0, k-1);    
-}//end-EulerPhiPowerOfTwo()
-
-void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
-    
-    cout << "\n/** " << name << " **/" << endl;
-    for(int i = 0; i < matrix.length(); i++) {
-        for(int j = 0; j < matrix[0].length(); j++)
-            cout << matrix[i][j] << " ";
-        cout << endl;
-    }//end-for
-    
-}//end-PrintVectorZZX()
-
-RR Samplers::GramSchmidtProcess(Vec<ZZX>& BTilde, const Vec<ZZ_pX>& B, int n) {
-    
-    ZZX mult;
-    ZZ innerpr;
-    RR mu, norm;
-    int i, j, m;
-    m = B.length();
-    
-    // Gram-Schmidt reduced basis
-    BTilde.SetLength(m);
-    mult.SetLength(n);
-
-    for(i = 0; i < m; i++)
-        BTilde[i].SetLength(n); // n coefficients        
-    
-    for(i = 0; i < m; i++) {
-        
-        BTilde[i] = to_ZZX(B[i]);
-        
-        for(j = 0; j < i; j++) {                        
-            innerpr = this->InnerProduct(to_ZZX(B[i]), BTilde[j], n);
-            norm = to_RR(this->InnerProduct(BTilde[j], BTilde[j], n));            
-            div(mu, to_RR(innerpr), norm);            
-            this->Mult(mult, BTilde[j], mu, n);
-            sub(BTilde[i], BTilde[i], mult);                        
-        }//end-for
-        
-    }//end-for    
-    
-    RR normBTilde;    
-    normBTilde = this->NormOfBasis(BTilde, m, n);
-    
-    return normBTilde;
-    
-}//end-GramSchmidtProcess() 
-
-ZZX Samplers::SampleD(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, 
-                        ZZX c, RR norm, int precision, int tailcut, int n) {
-    
-    ZZX V;
-    int m;
-    m = B.length();
-    
-    V.SetLength(m);
-    V = to_ZZX(-1);
-    
-    if(sigma <= norm * log(n)/log(2)) {
-        cout << "\n[!] Sigma must be greater or equal to the norm of B times log(m)." << endl;
-        return V;
-    }//end-if        
-    
-    ZZX C, mult;
-    RR c_i, sigma_i;
-    int z_i;
-    
-    C.SetLength(m);    
-    mult.SetLength(n);
-    
-    V = to_ZZX(0);
-    C = c;
-    
-    /* The SampleD algorithm turns to be expansive because, in each iteration, 
-     * the probability matrix has to be rebuild (note that standard deviation and 
-     * center change at each step) */
-    for(int i = m-1; i >= 0; i--) {
-        c_i = to_RR(this->InnerProduct(C, BTilde[i], n))/to_RR(this->InnerProduct(BTilde[i], BTilde[i], n));
-        sigma_i = sigma/this->Norm(BTilde[i], n);        
-        this->BuildProbabilityMatrix(precision, tailcut, sigma_i, c_i);
-        z_i = this->KnuthYao(precision, tailcut, sigma_i, c_i);        
-        mul(mult, to_ZZX(B[i]), to_ZZ(z_i));
-        sub(C, C, mult);
-        add(V, V, mult);
-    }//end-for
-
-    return V;
-    
-}//end-SampleD()
-
-/* Rot_f(b) operation: generates a circulant matrix which contains the (n-1) rotations of vector b */
-void Samplers::rot(Vec<ZZ_pX>& out, const ZZ_pX& b, int n) {
-    
-    out.SetLength(n);
-    
-    ZZ_pX isometry;
-        
-    out[0] = b;    
-    isometry = b;    
-    
-    for(int i = 1; i < n; i++) {
-        out[i].SetLength(n);
-        isometry = this->Isometry(isometry);
-        out[i] = isometry;
-    }//end-for
-   
-//    cout << "\n/* rot_f(" << b << "): " << endl;
-//    for(int i = 0; i < n; i++) {
-//        cout << out[i] << endl;
-//    }
-    
-}//end-Rot()
-
-/* Giving a polynomial g, out contains (b*x)%phi(x) */
-ZZX Samplers::Isometry(ZZX& b) {
-    
-    if(IsZero(b))
-        return b;
-    
-    return MulByXMod(b, to_ZZX(this->f));
-    
-}//end-Isometry()
-
-/* Giving a polynomial g, out contains (b*x)%phi(x) */
-ZZ_pX Samplers::Isometry(ZZ_pX& b) {
-    
-    if(IsZero(b))
-        return b;
-    
-    return MulByXMod(b, this->f);
-    
-}//end-Isometry()
-
-
-/* Sampling a lattice point from a Gaussian centered in zero */
-ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n) {
-        
-    Vec<ZZX> auxB;
     ZZX C, mult, sample;
     int Z;
-    RR d, norm, sigma_i, tailcutRR;
-    int i, mn;
     
-    tailcutRR = to_RR(tailcut);
+    vec_RR auxC;
+    RR d, norm, sigma_i;
+    int i, j, mn;
+    
     mn = B.length(); // mn = (m1 + m2) * n
     
-    // Vectors:
+    auxC.SetLength(n);
     C.SetLength(n);
     mult.SetLength(n);
     sample.SetLength(n);
-            
-    auxB.SetLength(mn);
-    for(i = 0; i < mn; i++) {
-        auxB[i].SetLength(n);
-        auxB[i] = to_ZZX(B[i]); // Basis conversion from ZZ_pX to ZZX (no changes are made in coefficients)
-    }//end-for
-    
+                
     C = center; // Center of the lattice        
     
     /* The inner product and norm operations are taken 
      * in the inner product space H */
     for(i = mn-1; i >= 0; i--) {
         
-        norm = this->Norm(BTilde[i], n); // The norm of all vectors in a block of n is the same
-        cout << "norm: " << norm << endl;
+        norm = this->Norm(BTilde[i], n);
+        
+        for(j = 0; j < n; j++)
+            auxC[j] = to_RR(C[j]);
         
         // The new center for the discrete Gaussian
-        div(d, to_RR(this->InnerProduct(C, BTilde[i], n)), to_RR(this->InnerProduct(BTilde[i], BTilde[i], n)));        
-        cout << "d: " << d << endl;
+        div(d, this->InnerProduct(auxC, BTilde[i], n), this->InnerProduct(BTilde[i], BTilde[i], n));        
         
-        div(sigma_i, sigma, norm); // And the new standard deviation
-        cout << "sigma_i: " << sigma_i << endl;
+        // And the new standard deviation
+        div(sigma_i, sigma, norm);
         
-        this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d); // For Knuth-Yao algorithm                   
+        this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d);             
         
-        // There is a probability less than 2*exp(-tailcut^2/2) of sampling outside the interval (c - t*sigma, c + t*sigma).
-        Z = this->KnuthYao(precision, tailcut, sigma_i, d);
-        cout << "Z: " << Z << endl;
-        
-        mul(mult, auxB[i], (long)(Z)); // Multiply Z[i] by all coefficients of B_i        
-        cout << "mult: " << mult << endl;
+        Z = this->KnuthYao(tailcut, sigma_i, d);
+
+        mul(mult, B[i], Z);       
         
         sub(C, C, mult);
-        cout << "C: " << C << endl;
         
     }//end-for
     
@@ -718,49 +541,48 @@ ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZ_pX>& B, const Vec<ZZX>& BT
     
 }//end-GaussianSamplerFromLattice()
 
-RR Samplers::BlockGSO(Vec<ZZX>& BTilde, const Vec<ZZ_pX>& B, int m, int n) {
+RR Samplers::BlockGSO(mat_RR& BTilde, const Vec<ZZX>& B, int m, int n, int precision) {
     
-    cout << "\n[!] Norm of basis B: " << this->NormOfBasis(B, m*n, n);
+    // Precision of floating point operations
+    RR::SetPrecision(precision);    
     
+    cout << "\n[!] Norm of basis B: " << this->NormOfBasis(B, m*n, n);    
     cout << "\n[*] Block_GSO status: ";
     
-    BTilde.SetLength(m*n);
+    BTilde.SetDims(m*n, n);
     
-    Vec<ZZ_pX> outRot; // n x n matrix
-    Vec<ZZX> outGSO; // m*n x n matrix
-    ZZX mult;
+    mat_RR outRot, outGSO; // n x n matrices
+    vec_RR conv, ortho, mult;
     RR mu, innerpr, norm;
-    int i, j;
-
-    /* The reduced basis has m*n polynomials with n coefficients */
-    for(i = 0; i < m*n; i++)
-        BTilde[i].SetLength(n);
+    int i, j, k;
     
+    conv.SetLength(n);
+    ortho.SetLength(n);
     mult.SetLength(n);
     
     for(i = 0; i < m; i++) { // For each isometric block i in [1, ..., m]
-        
-        BTilde[i*n] = to_ZZX(B[i*n]); // Copy the vector whose expansion is an isometric basis
-        
-         /* For each expansion of a vector makes BTilde[i*n] orthogonal 
+
+        for(k = 0; k < n; k++) {
+            conv[k] = to_RR(B[i*n][k]); // Copy the vector whose expansion is an isometric basis
+            ortho[k] = to_RR(0);
+        }//end-for
+
+         /* For each expansion of a vector makes B[i*n] orthogonal 
           * to the previous vectors */
         for(j = 0; j < i*n; j++) {
-            
-            innerpr = to_RR(this->InnerProduct(to_ZZX(B[i*n]), BTilde[j], n));
-            
-            norm = to_RR(this->InnerProduct(BTilde[j], BTilde[j], n));
-            
-            mu = innerpr/norm;
-            
-            this->Mult(mult, BTilde[j], mu, n);
-            
-            sub(BTilde[n*i], BTilde[i*n], mult);
-            
+            innerpr = this->InnerProduct(conv, BTilde[j], n);            
+            norm = this->InnerProduct(BTilde[j], BTilde[j], n);            
+            div(mu, innerpr, norm);           
+            mul(mult, BTilde[j], mu);
+            add(ortho, ortho, mult);
         }//end-for
         
+        sub(BTilde[i*n], conv, ortho);            
+                
         // Expansion of the vector that is already orthogonal to its predecessors
-        this->rot(outRot, B[i*n], n); 
-        
+        // In (Lyubashevsky, and Prest, 2015), it uses B[i*n] instead
+        this->rot(outRot, BTilde[i*n], n);
+                
         // Computes its orthogonal basis
         this->FasterIsometricGSO(outGSO, outRot);
         
@@ -778,81 +600,141 @@ RR Samplers::BlockGSO(Vec<ZZX>& BTilde, const Vec<ZZ_pX>& B, int m, int n) {
     
 }//end-BlockGSO()
 
-/* It receives an isometric basis B^{n x n} = {b, r(b), ..., r^{n-1}(b)}, e.g. Rot_f(b) */
-void Samplers::FasterIsometricGSO(Vec<ZZX>& BTilde, const Vec<ZZ_pX>& B) {
-    
-    /* Although the basis is modulo q, the Gram-Schmidt basis 
-     * is in the ring Z[x]/f instead of Z_q[x]/f. */
+void Samplers::FasterIsometricGSO(mat_RR& BTilde, const mat_RR& B) {
     
     /* This implementation follows the Algorithm 3 
      * of (Lyubashevsky, and Prest, 2015) */
     
-    Vec<RR> C, D;
-    ZZX isometry, mult;
-    ZZX B1, V;
+    vec_RR C, D, isometry, mult, V;
     RR CD;
-    int i, n;
+    int n;
     
-    // Lengths:
-    n = B.length();
+    n = B.NumCols(); // B is a square matrix
     
-    // Vectors:
-    BTilde.SetLength(n);
+    BTilde.SetDims(n, n);
     C.SetLength(n);
     D.SetLength(n);
-    
-    for(i = 0; i < n; i++)
-        BTilde[i].SetMaxLength(n);
-    
-    // Polynomials:
+        
     isometry.SetMaxLength(n);
     mult.SetMaxLength(n);
-    B1.SetMaxLength(n);
     V.SetMaxLength(n);
     
-    B1 = to_ZZX(B[0]);
-    BTilde[0] = B1;
-    V = B1;
+    BTilde[0] = B[0];
+    V = B[0];    
+    C[0] = this->InnerProduct(V, this->Isometry(BTilde[0], n), n);
+    D[0] = this->InnerProduct(BTilde[0], BTilde[0], n);
     
-    C[0] = to_RR(this->InnerProduct(B1, this->Isometry(B1), n));
-    D[0] = to_RR(this->InnerProduct(B1, B1, n));
-    
-    for(i = 0; i < n-1; i++) {
-        
-        if(D[i] == to_RR(0)) {
-            cout << "\n[!] Error: division by zero ahead. Norm is zero. Aborting..." << endl;
-            return;
-        }//end-if
-        
-        div(CD, C[i], D[i]);
-        
-        isometry = this->Isometry(BTilde[i]);
-        
-        this->Mult(mult, V, CD, n); // The real coefficients are rounded to an integer
-        
-        sub(BTilde[i+1], isometry, mult);
-        
-        this->Mult(mult, isometry, CD, n);
-        
-        sub(V, V, mult);        
-        
-        C[i+1] = to_RR(this->InnerProduct(B1, this->Isometry(BTilde[i+1]), n));        
-        
-        mul(D[i+1], CD, C[i]);
-        
-        sub(D[i+1], D[i], D[i+1]);
-        
+    for(int i = 0; i < n-1; i++) {        
+        div(CD, C[i], D[i]);        
+        isometry = this->Isometry(BTilde[i], n);         
+        mul(mult, V, CD);                
+        sub(BTilde[i+1], isometry, mult);            
+        mul(mult, isometry, CD);        
+        sub(V, V, mult);                        
+        C[i+1] = this->InnerProduct(B[0], this->Isometry(BTilde[i+1], n), n);         
+        sub(D[i+1], D[i], CD*C[i]);                
     }//end-for
     
 }//end-FasterIsometricGSO()
 
-RR Samplers::NormOfBasis(const Vec<ZZ_pX>& B, int m, int n) {
+void Samplers::Rot(Vec<ZZX>& A, const Vec<ZZ_pX>& a, int m, int n) {
+    
+    Vec<ZZX> out;                            
+    int i, index, j;
+    
+    A.SetLength(m*n);        
+    
+    for(i = 0; i < m*n; i++)
+        A[i].SetMaxLength(n);
+    
+    for(i = 0, index = 0; i < m; i++) {
+        this->rot(out, a[i], n);
+        for(j = 0; j < n; j++)
+            A[index++] = out[j];                
+    }//end-for
+    
+}//end-Rot()
+
+/* Rot_f(b) operation: generates a circulant matrix which contains the (n-1) rotations of vector b */
+void Samplers::rot(Vec<ZZX>& out, const ZZ_pX& b, int n) {
+    
+    ZZX auxB, isometry;
+    
+    out.SetLength(n);
+    auxB.SetLength(n);
+    
+    auxB = to_ZZX(b);        
+    out[0] = auxB;    
+    isometry = auxB;
+    
+    for(int i = 1; i < n; i++) {
+        isometry = this->Isometry(isometry, n);
+        out[i] = isometry;
+    }//end-for
+   
+}//end-Rot()
+
+void Samplers::rot(mat_RR& out, const vec_RR& b, int n) {
+        
+    vec_RR isometry;
+    
+    out.SetDims(n, n);    
+    
+    out[0] = b;    
+    isometry = b;    
+    
+    for(int i = 1; i < n; i++) {
+        isometry = this->Isometry(isometry, n);
+        out[i] = isometry;
+    }//end-for
+    
+}//end-Rot()
+
+vec_RR Samplers::Isometry(vec_RR& b, int n) {
+    
+    if(IsZero(b))
+        return b;
+    
+    vec_RR out;
+    
+    out.SetLength(n);
+        
+    out[0] = -b[n-1];
+    
+    for(int i = 1; i < n; i++)
+        out[i] = b[i-1];
+    
+    return out;
+    
+}//end-Isometry()
+
+/* Giving a polynomial g, out contains (b*x)%f(x) */
+ZZX Samplers::Isometry(ZZX& b, int n) {
+    
+    if(IsZero(b))
+        return b;
+    
+    ZZX out;
+    
+    out.SetLength(n);
+        
+    out[0] = -b[n-1];    
+    
+    for(int i = 1; i < n; i++)
+        out[i] = b[i-1];
+    
+    return out;
+    
+}//end-Isometry()
+
+RR Samplers::NormOfBasis(const mat_RR& B, int m, int n) {
     
     RR norm, normB;    
     
     normB = to_RR(0);
+    
     for(int i = 0; i < m; i++) {
-        norm = this->Norm(to_ZZX(B[i]), n);
+        norm = this->Norm(B[i], n);
         if(norm > normB)
             normB = norm;
     }//end-for
@@ -866,6 +748,7 @@ RR Samplers::NormOfBasis(const Vec<ZZX>& B, int m, int n) {
     RR norm, normB;    
     
     normB = to_RR(0);
+    
     for(int i = 0; i < m; i++) {
         norm = this->Norm(B[i], n);
         if(norm > normB)
@@ -876,32 +759,53 @@ RR Samplers::NormOfBasis(const Vec<ZZX>& B, int m, int n) {
     
 }//end-NormOfBasis()
 
-void Samplers::Mult(ZZX& out, const ZZX& V, RR c, int n) {    
+/* Norm of a polynomial */
+RR Samplers::Norm(const ZZX& b, int n) {
     
-    RR v;    
-    
-    if(!IsZero(V)) {
-        for(int i = 0; i < n; i++) {
-            v = to_RR(V[i]);
-            out[i] = to_ZZ(v*c);
-        }//end-for
-    } else
-        out = to_ZZX(0);
-    
-}//end-Mult()
+    ZZ norm = to_ZZ(0);
 
-RR Samplers::CoverageAreaZiggurat(RR sigma) {
+    for(int i = 0; i < n; i++)
+        norm += b[i]*b[i];
     
-    RR area, one;
-    int m;
+    return SqrRoot(to_RR(norm));
+        
+}//end-Norm()
+
+RR Samplers::Norm(const vec_RR& b, int n) {
     
-    one = to_RR(1);    
-    m = this->X.length(); // Actually, m is the numbers of rectangles plus one
+    RR norm, mult;
+    norm = to_RR(0);
+
+    for(int i = 0; i < n; i++) {
+        mul(mult, b[i], b[i]);
+        norm += mult;
+    }//end-for
     
-    area = to_RR(0);
-    for(int i = 1; i < m-1; i++) // Riemann sum
-        area += this->Probability(this->X[i], sigma, to_RR(0)) * (this->X[i] - this->X[i-1]);
+    return SqrRoot(norm);
+        
+}//end-Norm()
+
+RR Samplers::InnerProduct(const vec_RR& a, const vec_RR& b, int n) {
     
-    return area;
+    RR innerp, mult;
+    innerp = to_RR(0);
+
+    for(int i = 0; i < n; i++) {
+        mul(mult, a[i], b[i]);
+        innerp += mult;
+    }//end-for
     
-}//end-CoverageAreaZiggurat()
+    return innerp;
+    
+}//end-InnerProduct()
+
+void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
+    
+    cout << "\n/** " << name << " **/" << endl;
+    for(int i = 0; i < matrix.length(); i++) {
+        for(int j = 0; j < matrix[0].length(); j++)
+            cout << matrix[i][j] << " ";
+        cout << endl;
+    }//end-for
+    
+}//end-PrintVectorZZX()
