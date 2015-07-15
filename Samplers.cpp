@@ -369,8 +369,9 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
 /* Knuth-Yao algorithm to obtain a sample from the discrete Gaussian */
 int Samplers::KnuthYao(int tailcut, RR sigma, RR c) {
 
-    int bound, center, col, d, invalidSample, pNumRows, pNumCols, r, S, signal;
+    int bound, center, col, d, invalidSample, pNumRows, pNumCols, S, signal;
     unsigned enable, hit;
+    unsigned long r;
     
     bound = tailcut*to_int(sigma);
     center = to_int(c);
@@ -381,12 +382,24 @@ int Samplers::KnuthYao(int tailcut, RR sigma, RR c) {
     pNumRows = this->P.length(); // Precision
     pNumCols = this->P[0].length();    
     
+    Vec<int> randomBits;
+    randomBits.SetLength(pNumRows);
+    
+    int i, index, j, length;
+    length = sizeof(unsigned long)*8; // 64 bits 
+    
+    index = 0;
+    for(i = 0; i < (pNumRows/length+1); i++) {
+        r = RandomWord(); // It returns a word filled with pseudo-random bits
+        for(j = 0; j < length, index < pNumRows; j++, r <<= 1)
+            randomBits[index++] = (r >> (length-1)) & 1; // Getting the least significant bit
+    }//end-for
+    
     S = 0;
     
     for(int row = 0; row < pNumRows; row++) {
         
-        r = RandomBits_long(1); // Random choice between 0 and 1
-        d = 2*d + r; // Distance calculus
+        d = 2*d + randomBits[row]; // Distance calculus
         
         for(col = this->begin[row]; col < pNumCols; col++) {
             

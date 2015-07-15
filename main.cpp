@@ -92,24 +92,24 @@ int main(void) {
             averageZiggurat = 0.0;
             averageKnuthYao = 0.0;
             
-            int i, nIterations = 100;
+            int i, nIterations = 1000;
             
             Vec<int> ZigguratPoly, KnuthPoly;
-            int nSamples = 1; // #coefficients in the polynomial
+            int nSamples = 1024; // #coefficients in the polynomial
             
             for(i = 0; i < nIterations; i++) {
 
                 HIBE *hibe = new HIBE(q, m1, m2, k); // Parameters required only in Gaussian sampling from lattices  
                 
-                cout << endl;
+//                cout << endl;
+//                
+//                ts_start = get_timestamp();            
+//                ZigguratPoly = hibe->GetSampler()->PolyGeneratorZiggurat(nSamples, nRectangles, sigmaRR, omega, precision, tailcut); // Coefficients, rectangles, sigma, omega and precision
+//                ts_end = get_timestamp();            
+//
+//                averageZiggurat += (ts_end - ts_start);
                 
-                ts_start = get_timestamp();            
-                ZigguratPoly = hibe->GetSampler()->PolyGeneratorZiggurat(nSamples, nRectangles, sigmaRR, omega, precision, tailcut); // Coefficients, rectangles, sigma, omega and precision
-                ts_end = get_timestamp();            
-
-                averageZiggurat += (ts_end - ts_start);
-                
-                cout << ZigguratPoly << endl;
+//                cout << ZigguratPoly << endl;
 
                 ts_start = get_timestamp();                        
                 KnuthPoly = hibe->GetSampler()->PolyGeneratorKnuthYao(nSamples, precision, tailcut, sigmaRR, c); // Coefficients, precision, tailcut, and sigma
@@ -117,7 +117,7 @@ int main(void) {
 
                 averageKnuthYao += (ts_end - ts_start);
                 
-                cout << KnuthPoly << endl;
+//                cout << KnuthPoly << endl;
 
                 delete(hibe);
             
