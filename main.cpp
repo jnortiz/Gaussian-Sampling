@@ -92,10 +92,10 @@ int main(void) {
             averageZiggurat = 0.0;
             averageKnuthYao = 0.0;
             
-            int i, nIterations = 1000;
+            int i, nIterations = 10000;
             
             Vec<int> ZigguratPoly, KnuthPoly;
-            int nSamples = 1024; // #coefficients in the polynomial
+            int nSamples = 1; // #coefficients in the polynomial
             
             for(i = 0; i < nIterations; i++) {
 

@@ -391,8 +391,8 @@ int Samplers::KnuthYao(int tailcut, RR sigma, RR c) {
     index = 0;
     for(i = 0; i < (pNumRows/length+1); i++) {
         r = RandomWord(); // It returns a word filled with pseudo-random bits
-        for(j = 0; j < length, index < pNumRows; j++, r <<= 1)
-            randomBits[index++] = (r >> (length-1)) & 1; // Getting the least significant bit
+        for(j = 0; j < length, index < pNumRows; j++, r >>= 1)
+            randomBits[index++] = (r & 1); // Getting the least significant bit
     }//end-for
     
     S = 0;
@@ -437,15 +437,20 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
     Vec<int> auxBegin;
     
     // The random variable consists of elements in [c-tailcut*sigma, c+tailcut*sigma]
-    int i, j, bound, pNumCols, pNumRows;
-    RR probOfX;    
+    int i, index, j, bound, pNumCols, pNumRows, x;
+    RR probOfX;
+    RR pow;
     
     bound = tailcut*to_int(sigma);
+    
+//    probOfX.SetLength(bound+1);
        
     auxP.SetLength(precision);
     for(i = 0; i < auxP.length(); i++)
         auxP[i].SetLength(bound+1);
 
+    /** Option #1 **/
+    
     div(probOfX, Probability(to_RR(0) + c, sigma, c), to_RR(2));
     BinaryExpansion(auxP, probOfX, precision, bound);
     
@@ -455,7 +460,30 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
         BinaryExpansion(auxP, probOfX, precision, i);
     }//end-for
     
+    this->P = auxP;    
+
+    /** Option #2 **/
+    /*
+    div(probOfX[0], Probability(to_RR(0) + c, sigma, c), to_RR(2));
+    for(x = 1; x <= bound; x++)
+        probOfX[x] = Probability(to_RR(x) + c, sigma, c);
+    
+    i = -1;
+    for(j = 0; j < precision; j++) {
+        pow = power2_RR(i--); // 2^{i}
+        index = bound;
+        for(x = 0; x <= bound, index >= 0; x++, index--) {
+            if(probOfX[x] >= pow) {
+                auxP[j][index] = 1;
+                probOfX[x] -= pow;
+            }//end-if
+            else
+                auxP[j][index] = 0;                
+        }//end-for
+    }//end-while
+    
     this->P = auxP;
+*/
     
     // Uncomment this line if you want to preview the probability matrix P
 //    this->PrintMatrix("Probability matrix", this->P);

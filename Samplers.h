@@ -30,7 +30,7 @@ public:
     /* Polynomial generation with coefficient sampled from a discrete Gaussian distribution */
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
     Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma, RR c);
-
+    
     void Rot(Vec<ZZX>& A, const Vec<ZZ_pX>& a, int m, int n);
 
     /* Algorithm for generating the Gram-Schmidt reduced basis */
