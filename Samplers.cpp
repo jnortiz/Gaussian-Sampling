@@ -438,32 +438,17 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
     
     // The random variable consists of elements in [c-tailcut*sigma, c+tailcut*sigma]
     int i, index, j, bound, pNumCols, pNumRows, x;
-    RR probOfX;
+    vec_RR probOfX;
     RR pow;
     
     bound = tailcut*to_int(sigma);
     
-//    probOfX.SetLength(bound+1);
+    probOfX.SetLength(bound+1);
        
     auxP.SetLength(precision);
     for(i = 0; i < auxP.length(); i++)
         auxP[i].SetLength(bound+1);
 
-    /** Option #1 **/
-    
-    div(probOfX, Probability(to_RR(0) + c, sigma, c), to_RR(2));
-    BinaryExpansion(auxP, probOfX, precision, bound);
-    
-    i = bound-1;
-    for(int x = 1; x <= bound, i >= 0; x++, i--) {
-        probOfX = Probability(to_RR(x) + c, sigma, c);
-        BinaryExpansion(auxP, probOfX, precision, i);
-    }//end-for
-    
-    this->P = auxP;    
-
-    /** Option #2 **/
-    /*
     div(probOfX[0], Probability(to_RR(0) + c, sigma, c), to_RR(2));
     for(x = 1; x <= bound; x++)
         probOfX[x] = Probability(to_RR(x) + c, sigma, c);
@@ -483,7 +468,7 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
     }//end-while
     
     this->P = auxP;
-*/
+
     
     // Uncomment this line if you want to preview the probability matrix P
 //    this->PrintMatrix("Probability matrix", this->P);
