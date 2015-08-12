@@ -216,6 +216,41 @@ void Samplers::BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precis
             
 }//end-BinaryExpansion()
 
+void Samplers::GramSchmidtProcess(Vec< Vec<double> >& T_ATilde, const Vec< Vec<int> >& T_A, int n) {
+    
+    cout << "\n[*] Gram-Schmidt process status: ";
+        
+    int i, j, k, m;
+    double mu;
+    
+    m = T_A.length();
+    
+    T_ATilde.SetLength(m);
+    for(i = 0; i < m; i++)
+        T_ATilde[i].SetLength(m*n);
+                
+    for(i = 0; i < m; i++) {
+        this->CopyIntToDoubleVec(T_ATilde[i], T_A[i]);
+        for(j = 0; j < i; j++) {
+            mu = this->InnerProduct(T_A[i], T_ATilde[j])/this->InnerProduct(T_ATilde[j], T_ATilde[j]);
+            for(k = 0; k < (m*n); k++)
+                T_ATilde[i][k] = T_ATilde[i][k] - mu*T_ATilde[j][k];            
+        }//end-for
+    }//end-for
+    
+    cout << "Pass!";
+    
+}//end-GramSchmidtProcess() 
+
+void Samplers::CopyIntToDoubleVec(Vec<double>& B, const Vec<int>& A) {
+    
+    B.SetLength(A.length());
+    
+    for(int i = 0; i < B.length(); i++)
+        B[i] = (double)A[i];
+    
+}
+
 /* Generic method for Gaussian Sampling over lattices */
 ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n) {
 
@@ -283,6 +318,45 @@ RR Samplers::Norm(const vec_RR& b, int n) {
         
 }//end-Norm()
 
+double Samplers::InnerProduct(const Vec<int>& a, const Vec<int>& b) {
+    
+    double innerp, mult;
+    innerp = 0.0;
+
+    for(int i = 0; i < a.length(); i++) {
+        mult = ((double)a[i])*((double)b[i]);
+        innerp += mult;
+    }//end-for
+    
+    return innerp;
+    
+}//end-InnerProduct()
+
+double Samplers::InnerProduct(const Vec<double>& a, const Vec<double>& b) {
+    
+    double innerp = 0.0;
+
+    for(int i = 0; i < a.length(); i++)
+        innerp += a[i]*b[i];
+    
+    return innerp;
+    
+}//end-InnerProduct()
+
+double Samplers::InnerProduct(const Vec<int>& a, const Vec<double>& b) {
+    
+    double innerp, mult;
+    innerp = 0.0;
+
+    for(int i = 0; i < a.length(); i++) {
+        mult = ((double)a[i])*b[i];
+        innerp += mult;
+    }//end-for
+    
+    return innerp;
+    
+}//end-InnerProduct()
+
 RR Samplers::InnerProduct(const vec_RR& a, const vec_RR& b, int n) {
     
     RR innerp, mult;
@@ -296,6 +370,34 @@ RR Samplers::InnerProduct(const vec_RR& a, const vec_RR& b, int n) {
     return innerp;
     
 }//end-InnerProduct()
+
+double Samplers::NormOfBasis(const Vec< Vec<double> >& T_ATilde) {
+    
+    double norm, normT_ATilde = 0.0;
+    
+    for(int i = 0; i < T_ATilde.length(); i++) {
+        norm = sqrt(this->InnerProduct(T_ATilde[i], T_ATilde[i]));
+        if(norm > normT_ATilde)
+            normT_ATilde = norm;
+    }//end-for
+    
+    return normT_ATilde;
+    
+}//end-NormOfBasis()
+
+double Samplers::NormOfBasis(const Vec< Vec<int> >& T_A) {
+    
+    double norm, normT_A = 0.0;
+    
+    for(int i = 0; i < T_A.length(); i++) {
+        norm = sqrt(this->InnerProduct(T_A[i], T_A[i]));
+        if(norm > normT_A)
+            normT_A = norm;
+    }//end-for
+    
+    return normT_A;
+    
+}//end-NormOfBasis()
 
 void Samplers::PrintMatrix(const string& name, const Vec< Vec<int> >& matrix) {
     

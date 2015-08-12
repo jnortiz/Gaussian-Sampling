@@ -79,9 +79,9 @@ void HIBE::Setup(int h) {
 //    this->PrintMatrixZZ_pX("Matrix A_prime", this->A_prime);
 //    this->PrintVectorZZ_pX("Vector B", this->B);
 //    cout << "\n/** Polynomial u **/\n" << this->u << endl;    
-//    this->PrintMatrixZZX("Master Secret Key (msk)", this->msk);
+//    this->PrintMatrixInt("Master Secret Key (msk)", this->msk);
     
-    cout << "[*] Setup status: Pass!" << endl;
+    cout << "\n[*] Setup status: Pass!" << endl;
     
 }//end-Setup()
 
@@ -384,12 +384,28 @@ int HIBE::IdealTrapGen() {
     
     if(this->FinalVerification(A, S)) {
         this->A = A;
-        this->msk = S;
+        this->ZZXToIntMatrix(this->msk, S);
         return 1;
     } else
         return 0;
     
 }//end-IdealTrapGen()
+
+void HIBE::ZZXToIntMatrix(Vec< Vec<int> >& T_A, const Vec< Vec< ZZX> >& S) {
+    
+    int mn = this->n*this->m;
+    
+    /* The private basis has m x m*n integers values */
+    T_A.SetLength(this->m);
+    for(int i = 0; i < this->m; i++)
+        T_A[i].SetLength(mn);
+    
+    for(int i = 0; i < this->m; i++)
+        for(int j = 0; j < this->m; j++)
+            for(int k = 0; k < this->n; k++)
+                T_A[i][j*this->n + k] = to_int(S[i][j][k]);
+    
+}//end-ZZXToIntMatrix()
 
 void HIBE::Decomp(Vec< Vec<ZZX> >& _W, const Vec<ZZX>& _h) {
     
@@ -511,12 +527,15 @@ void HIBE::Add(Vec<ZZX>& c, const Vec<ZZX>& a, const Vec<ZZX>& b) {
 
 void HIBE::Concat(Vec< Vec<ZZX> >& S, const Vec< Vec<ZZX> >& V, const Vec< Vec<ZZX> >& P, const Vec< Vec<ZZX> >& D, const Vec< Vec<ZZX> >&B) {
     
-    int i, j;
+    int i, j, k;
     int iS, jS;
-    S.SetLength(this->m);
     
-    for(i = 0; i < S.length(); i++)
+    S.SetLength(this->m);    
+    for(i = 0; i < S.length(); i++) {
         S[i].SetLength(this->m);
+        for(k = 0; k < this->m; k++) 
+            S[i][k].SetLength(this->n);
+    }//end-for
     
     /* Copying V matrix to top-left of S */
     for(i = 0; i < V.length(); i++)
@@ -554,13 +573,11 @@ void HIBE::Concat(Vec<ZZ_pX>& A, const Vec<ZZ_pX>& A1, const Vec<ZZ_pX>& A2) {
     
 }//end-Concat()
 
-void HIBE::PrintMatrixZZX(const string& name, const Vec< Vec<ZZX> >& M) {
+void HIBE::PrintMatrixInt(const string& name, const Vec< Vec<int> >& M) {
     
     cout << "\n/** " << name << " **/" << endl;
     for(int i = 0; i < M.length(); i++) {
-        for(int j = 0; j < M[0].length(); j++)
-            cout << M[i][j] << " ";
-        cout << endl;
+        cout << M[i] << endl;
     }//end-for
     
 }//end-PrintMatrixZZX()

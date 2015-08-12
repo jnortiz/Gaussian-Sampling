@@ -27,6 +27,14 @@ public:
     Samplers(int q, const ZZ_pX& f);
     virtual ~Samplers();
     
+    /* Generic algorithm for GSO basis construction */
+    void GramSchmidtProcess(Vec< Vec<double> >& T_ATilde, const Vec< Vec<int> >& T_A, int n);
+    /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c}*/
+    ZZX GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n);
+
+    double NormOfBasis(const Vec< Vec<double> >& T_ATilde);
+    double NormOfBasis(const Vec< Vec<int> >& T_A);
+    
 private:
         
     /* Attributes for sampling from lattice */
@@ -35,9 +43,6 @@ private:
     /* Knuth-Yao attributes */
     Vec< Vec<int> > P;
     Vec<int> begin;
-
-    /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c}*/
-    ZZX GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n);
     
     /* Sampling from a discrete Gaussian distribution over the integers */
     int KnuthYao(int tailcut, RR sigma, RR c);
@@ -49,9 +54,14 @@ private:
 
     /* Auxiliary functions of sampling from lattices */    
     RR InnerProduct(const vec_RR& a, const vec_RR& b, int n);    
-    RR Norm(const vec_RR& b, int n);        
+    double InnerProduct(const Vec<int>& a, const Vec<int>& b);
+    double InnerProduct(const Vec<int>& a, const Vec<double>& b);
+    double InnerProduct(const Vec<double>& a, const Vec<double>& b);
+    
+    RR Norm(const vec_RR& b, int n);
 
     void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
+    void CopyIntToDoubleVec(Vec<double>& B, const Vec<int>& A);
     
 };
 

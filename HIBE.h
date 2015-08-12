@@ -46,6 +46,7 @@ public:
     Vec<Vec<ZZ_pX> > GetA_prime() const { return A_prime; }
     Vec<ZZ_pX> GetB() const { return B; }
     ZZ_pX GetU() const { return u; }
+    Vec<Vec<int> > GetMsk() const { return msk; }
     Samplers* GetSampler() const { return sampler; }
     
 private:
@@ -67,7 +68,7 @@ private:
     ZZ_pX u;
     
     /* Master secret key */
-    Vec< Vec<ZZX> > msk;
+    Vec< Vec<int> > msk;
     
     /* Sampling from Gaussian distributions */
     Samplers *sampler;
@@ -96,7 +97,9 @@ private:
     ZZ sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i);
     
     /* Auxiliary functions */
-    void PrintMatrixZZX(const string& name, const Vec< Vec<ZZX> >& M);
+    void ZZXToIntMatrix(Vec< Vec<int> >& T_A, const Vec< Vec< ZZX> >& S);
+    
+    void PrintMatrixInt(const string& name, const Vec< Vec<int> >& M);
     void PrintVectorZZX(const string& name, const Vec<ZZX>& M);
     void PrintMatrixZZ_pX(const string& name, const Vec< Vec<ZZ_pX> >& M);
     void PrintVectorZZ_pX(const string& name, const Vec<ZZ_pX>& M);

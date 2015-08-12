@@ -20,34 +20,35 @@ static timestamp_t get_timestamp() {
 
 int main(void) {
         
-    int action = 1;
-    
     timestamp_t ts_start, ts_end;
     int h, k;
     double lambda;
     int m1, m2, q, r;
 
     /* 128-bit security level */
-//    h = 10;
-//    k = 7; // n = 2^k is the degree of polynomials in R and R_0
-//    q = 2083; //q must be prime and congruent to 3 mod 8
-//    m1 = 13;
-//    m2 = 170; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+    h = 10;
+    k = 7; // n = 2^k is the degree of polynomials in R and R_0
+    q = 2083; //q must be prime and congruent to 3 mod 8
+    m1 = 13;
+    m2 = 170; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
 
+    
     /* Intermediate parameter set */
-//        h = 10;
-//        k = 6; // n = 2^k is the degree of polynomials in R and R_0
-//        q = 1019; //q must be prime and congruent to 3 mod 8
-//        m1 = 11;
-//        m2 = 122; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+/*        h = 10;
+        k = 6; // n = 2^k is the degree of polynomials in R and R_0
+        q = 1019; //q must be prime and congruent to 3 mod 8
+        m1 = 11;
+        m2 = 122; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+*/
     
     /* Toy parameter set */
-    h = 10;
+/*    h = 10;
     k = 2; // n = 2^k is the degree of polynomials in R and R_0
     q = 11; //q must be prime and congruent to 3 mod 8
     m1 = 5;
     m2 = 30; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
-
+*/
+    
     r = ceil((double)(1 + (log(q)/log(3))));
     lambda = ceil(1 + (log(q)/log(2)));
 
@@ -88,8 +89,17 @@ int main(void) {
     ts_end = get_timestamp();            
 
     avgSetup += (ts_end - ts_start);                
-    cout << "\n[!] Setup running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+    cout << "[!] Setup running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
 
+    Vec< Vec<double> > T_ATilde;
+    hibe->GetSampler()->GramSchmidtProcess(T_ATilde, hibe->GetMsk(), hibe->GetN());
+    
+//    cout << "\n/** GSO basis **/\n";
+//    for(int i = 0; i < T_ATilde.length(); i++)
+//        cout << T_ATilde[i] << endl;
+    
+    cout << "\n[!] Norm of good basis: " << hibe->GetSampler()->NormOfBasis(hibe->GetMsk()) << endl;
+    cout << "[!] Norm of GSO basis: " << hibe->GetSampler()->NormOfBasis(T_ATilde) << endl;
     delete(hibe);
     
     return 0;
