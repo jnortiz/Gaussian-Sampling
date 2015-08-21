@@ -35,10 +35,18 @@ public:
     double NormOfBasis(const Vec< Vec<double> >& T_ATilde);
     double NormOfBasis(const Vec< Vec<int> >& T_A);
     
+    RR Ziggurat(int m, RR sigma, int precision, int tail);
+    RR DZRecursion(Vec<RR>& X, int m, RR r, RR sigma);
+    void DZCreatePartition(int m, RR sigma, int n, int tail);
+    RR NewMarsagliaTailMethod(RR r);
+    
 private:
         
     /* Attributes for sampling from lattice */
     ZZ_pX f;// Polynomial R = Z_p[X]/f    
+    
+    /* (Continuous) Ziggurat attributes */
+    Vec<RR> X;
     
     /* Knuth-Yao attributes */
     Vec< Vec<int> > P;

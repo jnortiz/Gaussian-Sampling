@@ -216,6 +216,161 @@ void Samplers::BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precis
             
 }//end-BinaryExpansion()
 
+RR Samplers::Ziggurat(int m, RR sigma, int precision, int tail) {
+    
+    /* Create partitioning first */
+    RR v;    
+    this->DZCreatePartition(m, sigma, precision, tail, v);
+    
+    /* Sampling phase */    
+    RR c, U, z;
+    int i;
+    double ulong_size = (double)(sizeof(unsigned long)*8);
+    
+    c = to_RR(0);
+    
+    for(;;) {
+    
+        i = RandomBnd(m); // Sample a random value in {0, ..., m-1}
+        U = to_RR((RandomBnd(ulong_size-1) + 1)/ulong_size);
+        
+        if(i > 0)
+            z = U*this->X[i];
+        else
+            z = U*v/this->Probability(X[i], sigma, c);
+        
+        if(z > this->X[i+1])
+            return z;
+        
+        if(i == 0)
+            return this->NewMarsagliaTailMethod(this->X[m-1]);
+        
+        U = to_RR((RandomBnd(ulong_size-1) + 1)/ulong_size);
+        
+        if(i > 0 && U*(this->Probability(X[i], sigma, c) - this->Probability(this->X[i+1], sigma, c)) < (this->Probability(z, sigma, c) - this->Probability(this->X[i+1], sigma, c)))
+            return z;
+            
+    }//end-for
+    
+}//end-Ziggurat()
+
+/* DZCreatePartition defines the x and y axes of rectangles in the Gaussian distribution */
+void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail, RR& v) {
+    
+    /* The Ziggurat algorithm was designed for centered Gaussian distributions; 
+     i.e., c = 0. */
+    
+    /*
+     * Parameters description:
+     * m: number of rectangles
+     * sigma: Gaussian distribution parameter
+     * n: bit precision
+     */
+    
+    /* Output precision setup */
+    RR::SetPrecision((long)n);
+    
+    // The approximation error must be less than 2^{-n}
+    RR statDistance = power2_RR(-((long)n));
+    
+    Vec<RR> bestX, X;
+    RR bestdiff, lastdiff, r, tailcut, y0;
+    int i;
+    
+    bestX.SetLength(m);
+    X.SetLength(m);
+            
+    bestX[m-1] = -1;
+    
+    tailcut = to_RR(tail)*sigma;
+    bestdiff = to_RR(3);
+    
+    while(tailcut < to_RR(tail+1)*sigma) {
+        
+        y0 = to_RR(-1);
+        lastdiff = to_RR(-2);
+        r = tailcut;
+        
+        while(y0 < 0 || abs(y0) > statDistance && abs(y0 - lastdiff) > statDistance) {
+            
+            lastdiff = y0;
+            
+            y0 = this->DZRecursion(X, m, r, v) - to_RR(1);            
+            
+            if(y0 == -2) // Error in "inv" calculus
+                break;
+            
+            if(y0 >= 0) { // The found partitioning is valid
+                for(int i = 0; i < m; i++)
+                    bestX[i] = X[i];                
+                bestdiff = y0;                                
+            }//end-if
+            
+            if(y0 == lastdiff)
+                break;            
+        }//end-while
+                
+        if(y0 < 0 || abs(y0) > statDistance && abs(y0 - lastdiff) > statDistance)
+            tailcut++;
+        else
+            break;
+        
+    }//end-while
+    
+    if(bestX[m-1] != -1) {
+        cout << "[*] DZCreatePartition status: Pass!" << endl;        
+        this->X.SetLength(m);
+        for(i = 0; i < this->X.length(); i++)
+            this->X[i] = bestX[i];
+    }//end-if
+    else // No valid partition was found
+        cout << "[*] DZCreatePartition status: Error!" << endl;
+            
+}//end-DZCreatePartition()
+
+/* It is used in DZCreatePartition to define the distance y0 */
+RR Samplers::DZRecursion(Vec<RR>& X, int m, RR r, RR sigma, RR& v) {
+    
+    RR c;
+    
+    c = to_RR(0);
+    
+    X.SetLength(m);
+    X[m-1] = r;
+    
+    v = r*this->Probability(r, sigma, c) /*+ integrate r to infinity Probability(x) */;
+    
+    for(int i = (m-2); i >= 0; i--) {
+        if(X[i+1] == to_RR(0))
+            return -1;
+        X[i] = sqrt(-2 * log(sqrt(2*ComputePi_RR())(v/X[i+1] + this->Probability(X[i+1], sigma, c))));
+    }//end-for
+    
+    return (v - X[0] + X[0]*this->Probability(X[0], sigma, c));
+        
+}//end-DZCreatePartition()
+
+/* Given a threshold r, this function returns a value in the tail region (Thomas et al., 2007) */
+RR Samplers::NewMarsagliaTailMethod(RR r) {
+    
+    /* r is the right most x-coordinate in Ziggurat partitioning */
+    RR a, b;
+    RR x, y;
+    double ulong_size = (double)(sizeof(unsigned long)*8);
+    
+    do {                        
+        // Two variables with values in (0, 1)
+        a = to_RR((RandomBnd(ulong_size-1) + 1)/ulong_size);
+        b = to_RR((RandomBnd(ulong_size-1) + 1)/ulong_size);
+        div(x, -log(a), r);
+        y = -log(b);
+    } while(y + y > x*x);
+    
+    return (r+x);
+    
+}//end-NewMarsagliaTailMethod()
+
+
 void Samplers::GramSchmidtProcess(Vec< Vec<double> >& T_ATilde, const Vec< Vec<int> >& T_A, int n) {
     
     cout << "\n[*] Gram-Schmidt process status: ";

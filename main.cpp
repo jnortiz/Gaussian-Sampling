@@ -6,6 +6,7 @@
  */
 
 #include <cstdlib>
+#include <cstdint>
 #include <math.h>
 #include <NTL/RR.h>
 #include "HIBE.h"
@@ -19,7 +20,7 @@ static timestamp_t get_timestamp() {
 }
 
 int main(void) {
-        
+
     timestamp_t ts_start, ts_end;
     int h, k;
     double lambda;
@@ -78,7 +79,13 @@ int main(void) {
     }
     
     HIBE *hibe = new HIBE(q, m1, m2, k); // Parameters required only in Gaussian sampling from lattices  
-        
+    
+    double output;
+    output = hibe->GetSampler()->NewMarsagliaTailMethod(13.0);
+    cout << "Output: " << output << endl;
+    
+    return 0;
+    
     timestamp_t avgSetup;
             
     avgSetup = 0.0;
