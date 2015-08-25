@@ -216,7 +216,11 @@ void Samplers::BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precis
             
 }//end-BinaryExpansion()
 
-RR Samplers::Ziggurat(int m, RR sigma, int precision, int tail) {
+RR Samplers::Ziggurat(int m, RR sigma, int precision, RR tail) {
+    
+    cout << "[*] Ziggurat status: ";
+    RR::SetPrecision((long)precision);
+    RR::SetOutputPrecision((long)precision);
     
     /* Create partitioning first */
     RR v;    
@@ -252,11 +256,14 @@ RR Samplers::Ziggurat(int m, RR sigma, int precision, int tail) {
             
     }//end-for
     
+    cout << "Pass!\n";
+    
 }//end-Ziggurat()
 
 /* DZCreatePartition defines the x and y axes of rectangles in the Gaussian distribution */
-void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail, RR& v) {
+void Samplers::DZCreatePartition(int m, RR sigma, int n, RR tail, RR& v) {
     
+    cout << "\n[*] DZCreatePartition status: ";
     /* The Ziggurat algorithm was designed for centered Gaussian distributions; 
      i.e., c = 0. */
     
@@ -267,83 +274,117 @@ void Samplers::DZCreatePartition(int m, RR sigma, int n, int tail, RR& v) {
      * n: bit precision
      */
     
-    /* Output precision setup */
-    RR::SetPrecision((long)n);
-    
-    // The approximation error must be less than 2^{-n}
-    RR statDistance = power2_RR(-((long)n));
-    
     Vec<RR> bestX, X;
-    RR bestdiff, lastdiff, r, tailcut, y0;
+    RR bestdiff, r, z;
+    
+    RR statDistance = power2_RR(-((long)n));
+    RR overM = to_RR(1)/to_RR(m);
+    RR minusOne = to_RR(-1);
+    RR zero = to_RR(0);
+    
     int i;
+    int first = 1;
     
-    bestX.SetLength(m);
     X.SetLength(m);
-            
-    bestX[m-1] = -1;
+    bestX.SetLength(m);            
     
-    tailcut = to_RR(tail)*sigma;
-    bestdiff = to_RR(3);
+    bestX[m-1] = minusOne;    
+    z = minusOne;    
+    r = (tail*sigma)/2; //r = x_m, the mth x-value
+    bestdiff = r; // Arbitrary initial value
     
-    while(tailcut < to_RR(tail+1)*sigma) {
-        
-        y0 = to_RR(-1);
-        lastdiff = to_RR(-2);
-        r = tailcut;
-        
-        while(y0 < 0 || abs(y0) > statDistance && abs(y0 - lastdiff) > statDistance) {
+    while(z != zero && r > zero) { // If r = 0 then the area v is also 0 (what doesn't make sense...)
+
+        z = this->DZRecursion(X, m, r, sigma, v);        
+
+        if(z == minusOne && first) { // Error in "inv" or square root computation
             
-            lastdiff = y0;
+            first = 0;
+            add(r, r, 2*overM);
+            div(overM, overM, to_RR(m));
             
-            y0 = this->DZRecursion(X, m, r, v) - to_RR(1);            
-            
-            if(y0 == -2) // Error in "inv" calculus
-                break;
-            
-            if(y0 >= 0) { // The found partitioning is valid
-                for(int i = 0; i < m; i++)
-                    bestX[i] = X[i];                
-                bestdiff = y0;                                
-            }//end-if
-            
-            if(y0 == lastdiff)
-                break;            
-        }//end-while
+            while(z != zero && r > zero) { // If r = 0 then the area v is also 0 (what doesn't make sense...)
                 
-        if(y0 < 0 || abs(y0) > statDistance && abs(y0 - lastdiff) > statDistance)
-            tailcut++;
-        else
+                z = this->DZRecursion(X, m, r, sigma, v);
+
+                if(z == minusOne)            
+                    break;
+
+                if(abs(z) < abs(bestdiff)) { // If the actual z is closest to zero, then that's the better partitioning until now
+                    for(int i = 0; i < m; i++)
+                        bestX[i] = X[i];                
+                    bestdiff = z;
+                }//end-if
+
+                sub(r, r, overM);
+                
+            }//end-while            
+            
+        }//end-if
+        
+        if(z == minusOne && !first)
             break;
+        
+        if(abs(z) < abs(bestdiff)) { // If the actual z is closest to zero, then that's the better partitioning until now
+            for(int i = 0; i < m; i++)
+                bestX[i] = X[i];                
+            bestdiff = z;
+        }//end-if
+        
+        sub(r, r, overM);
         
     }//end-while
     
-    if(bestX[m-1] != -1) {
-        cout << "[*] DZCreatePartition status: Pass!" << endl;        
+    if(z == zero)
+        for(int i = 0; i < m; i++)
+            bestX[i] = X[i];                    
+               
+    if(bestX[m-1] != -1) { // Some partitioning was found
+        
+        cout << "Pass!" << endl;        
+        cout << "\nFinal z value: " << bestdiff << endl;
+        cout << "Final r value: " << X[m-1] << endl;
+        cout << "Statistical difference: " << to_RR(statDistance - bestdiff) << endl;
+        
+        cout << "\n[!] Partitioning for " << m << " rectangles: \n";
         this->X.SetLength(m);
-        for(i = 0; i < this->X.length(); i++)
+        for(i = 0; i < this->X.length(); i++) {
             this->X[i] = bestX[i];
-    }//end-if
-    else // No valid partition was found
-        cout << "[*] DZCreatePartition status: Error!" << endl;
+            cout << this->X[i] << endl;
+        }//end-for
+        
+    } else // No valid partition was found
+        cout << "Error!" << endl;
             
 }//end-DZCreatePartition()
 
 /* It is used in DZCreatePartition to define the distance y0 */
 RR Samplers::DZRecursion(Vec<RR>& X, int m, RR r, RR sigma, RR& v) {
     
-    RR c;
+    RR zero = to_RR(0);
+    RR c = zero; // Center of distribution
+    RR interm, overPi;
+    RR minusOne = to_RR(-1);
+    div(overPi, minusOne, ComputePi_RR());
     
-    c = to_RR(0);
-    
-    X.SetLength(m);
     X[m-1] = r;
     
     v = r*this->Probability(r, sigma, c) /*+ integrate r to infinity Probability(x) */;
     
     for(int i = (m-2); i >= 0; i--) {
-        if(X[i+1] == to_RR(0))
-            return -1;
-        X[i] = sqrt(-2 * log(sqrt(2*ComputePi_RR())(v/X[i+1] + this->Probability(X[i+1], sigma, c))));
+        
+        if(X[i+1] == zero)
+            return minusOne;
+        
+        // TODO: general formula for rho^{-1}(x)
+        // This inversion of rho(x) works only when variance is equal to 1/2*pi
+        interm = overPi * log(v/X[i+1] + this->Probability(X[i+1], sigma, c));
+        
+        if(interm < zero)
+            return minusOne;
+            
+        X[i] = sqrt(interm);
+       
     }//end-for
     
     return (v - X[0] + X[0]*this->Probability(X[0], sigma, c));

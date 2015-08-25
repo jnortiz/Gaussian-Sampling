@@ -80,9 +80,9 @@ int main(void) {
     
     HIBE *hibe = new HIBE(q, m1, m2, k); // Parameters required only in Gaussian sampling from lattices  
     
-    double output;
-    output = hibe->GetSampler()->NewMarsagliaTailMethod(13.0);
-    cout << "Output: " << output << endl;
+    RR output;
+    output = hibe->GetSampler()->Ziggurat(128, to_RR(1)/sqrt(2*NTL::ComputePi_RR()), 107, to_RR(11));
+    cout << "\nContinuous sample: " << output << endl;
     
     return 0;
     

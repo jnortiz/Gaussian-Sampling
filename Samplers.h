@@ -35,10 +35,7 @@ public:
     double NormOfBasis(const Vec< Vec<double> >& T_ATilde);
     double NormOfBasis(const Vec< Vec<int> >& T_A);
     
-    RR Ziggurat(int m, RR sigma, int precision, int tail);
-    RR DZRecursion(Vec<RR>& X, int m, RR r, RR sigma);
-    void DZCreatePartition(int m, RR sigma, int n, int tail);
-    RR NewMarsagliaTailMethod(RR r);
+    RR Ziggurat(int m, RR sigma, int precision, RR tail);
     
 private:
         
@@ -60,6 +57,11 @@ private:
     void BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precision, int index);
     RR Probability(RR x, RR sigma, RR c);
 
+    /* Auxiliary functions of Ziggurat algorithm */
+    void DZCreatePartition(int m, RR sigma, int n, RR tail, RR& v);
+    RR DZRecursion(Vec<RR>& X, int m, RR r, RR sigma, RR& v);
+    RR NewMarsagliaTailMethod(RR r);
+    
     /* Auxiliary functions of sampling from lattices */    
     RR InnerProduct(const vec_RR& a, const vec_RR& b, int n);    
     double InnerProduct(const Vec<int>& a, const Vec<int>& b);
