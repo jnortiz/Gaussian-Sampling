@@ -81,7 +81,7 @@ void HIBE::Setup(int h) {
 //    cout << "\n/** Polynomial u **/\n" << this->u << endl;    
 //    this->PrintMatrixInt("Master Secret Key (msk)", this->msk);
     
-    cout << "\n[*] Setup status: Pass!" << endl;
+    cout << "[*] Setup status: Pass!" << endl;
     
 }//end-Setup()
 
@@ -309,7 +309,7 @@ int HIBE::IdealTrapGen() {
         
     }//end-for
     
-    // The remaining is fill_Wed with zero polynomials
+    // The remaining is filled with zero polynomials
     for(i = this->m1*this->lambda; i < this->m2; i++)
         for(j = 0; j < this->m1; j++)
             for(int k = 0; k < this->n; k++) {
@@ -384,28 +384,14 @@ int HIBE::IdealTrapGen() {
     
     if(this->FinalVerification(A, S)) {
         this->A = A;
-        this->ZZXToIntMatrix(this->msk, S);
+        this->msk = S;
+//        cout << "\n\n/** Short basis S **/\n" << S << endl;
+//        cout << "\n\n/** Random vector A **/\n" << A << endl;
         return 1;
     } else
         return 0;
     
 }//end-IdealTrapGen()
-
-void HIBE::ZZXToIntMatrix(Vec< Vec<int> >& T_A, const Vec< Vec< ZZX> >& S) {
-    
-    int mn = this->n*this->m;
-    
-    /* The private basis has m x m*n integers values */
-    T_A.SetLength(this->m);
-    for(int i = 0; i < this->m; i++)
-        T_A[i].SetLength(mn);
-    
-    for(int i = 0; i < this->m; i++)
-        for(int j = 0; j < this->m; j++)
-            for(int k = 0; k < this->n; k++)
-                T_A[i][j*this->n + k] = to_int(S[i][j][k]);
-    
-}//end-ZZXToIntMatrix()
 
 void HIBE::Decomp(Vec< Vec<ZZX> >& _W, const Vec<ZZX>& _h) {
     
