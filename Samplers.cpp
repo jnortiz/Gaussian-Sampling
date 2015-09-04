@@ -414,26 +414,30 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     
     RR::SetPrecision(precision);
     
-    cout << "\n[!] Norm of the short basis: " << this->NormOfBasis(T_A) << endl;    
+    cout << "\n[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
     cout << "[*] Gram-Schmidt process status: ";
     
+    mat_RR mu;
     vec_RR mult;
-    RR mu, norm;
+    RR norm, inner1, inner2;
     int i, j;
     int cols, rows;
     
     cols = T_A.NumCols();
     rows = T_A.NumRows();
     
+    mu.SetDims(rows, cols);
     T_ATilde.SetDims(rows, cols);
-                
+    mult.SetLength(rows);
+    
     for(i = 0; i < rows; i++) { // For each row vector
         
         T_ATilde[i] = T_A[i];
         
         for(j = 0; j < i; j++) {
-            div(mu, this->InnerProduct(T_A[i], T_ATilde[j]), this->InnerProduct(T_ATilde[j], T_ATilde[j]));
-            cout << mu << " ";
+            NTL::InnerProduct(inner1, T_A[i], T_ATilde[j]);
+            NTL::InnerProduct(inner2, T_ATilde[j], T_ATilde[j]);
+            div(mu[i][j], inner1, inner2);
             mul(mult, T_ATilde[j], mu);
             sub(T_ATilde[i], T_ATilde[i], mult);
         }//end-for
@@ -443,6 +447,8 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     norm = this->NormOfBasis(T_ATilde);
     this->TTilde = T_ATilde;
     cout << "Pass!" << endl;
+    
+    cout << mu << endl;
     
     return norm;
     
@@ -571,8 +577,8 @@ RR Samplers::BlockGSO(mat_RR& BTilde, const Vec<ZZX>& B, int n, int precision) {
           * to the previous vectors */
         for(j = 0; j < i*n; j++) {
             if(!IsZero(BTilde[j])) {
-                innerpr = this->InnerProduct(conv, BTilde[j]);            
-                norm = this->InnerProduct(BTilde[j], BTilde[j]);            
+                NTL::InnerProduct(innerpr, conv, BTilde[j]);
+                NTL::InnerProduct(norm, BTilde[j], BTilde[j]); // Square of norm is the inner product
                 div(mu, innerpr, norm);           
                 mul(mult, BTilde[j], mu);
                 add(ortho, ortho, mult);
@@ -627,9 +633,10 @@ void Samplers::FasterIsometricGSO(mat_RR& BTilde, const mat_RR& B) {
     V.SetMaxLength(n);
     
     BTilde[0] = B[0];
-    V = B[0];    
-    C[0] = this->InnerProduct(V, this->Isometry(BTilde[0], n));
-    D[0] = this->InnerProduct(BTilde[0], BTilde[0]);
+    V = B[0];
+    
+    NTL::InnerProduct(C[0], V, this->Isometry(BTilde[0], n));
+    NTL::InnerProduct(D[0], BTilde[0], BTilde[0]);
     
     for(int i = 0; i < n-1; i++) {        
         div(CD, C[i], D[i]);        
@@ -637,8 +644,8 @@ void Samplers::FasterIsometricGSO(mat_RR& BTilde, const mat_RR& B) {
         mul(mult, V, CD);                
         sub(BTilde[i+1], isometry, mult);            
         mul(mult, isometry, CD);        
-        sub(V, V, mult);                        
-        C[i+1] = this->InnerProduct(B[0], this->Isometry(BTilde[i+1], n));         
+        sub(V, V, mult);
+        NTL::InnerProduct(C[i+1], B[0], this->Isometry(BTilde[i+1], n));
         sub(D[i+1], D[i], CD*C[i]);                
     }//end-for
     
@@ -662,7 +669,7 @@ ZZX Samplers::Isometry(ZZX& b, int n) {
     
 }//end-Isometry()
 
-vec_RR Samplers::Isometry(vec_RR& b, int n) {
+vec_RR Samplers::Isometry(const vec_RR& b, int n) {
     
     vec_RR out;    
     out.SetLength(n);
@@ -675,25 +682,7 @@ vec_RR Samplers::Isometry(vec_RR& b, int n) {
     
 }//end-Isometry()
 
-void Samplers::RotBasis(Vec<ZZX>& T, const Vec< Vec<ZZX> >& S, int n) {
-    
-    Vec< Vec<ZZX> > outInnerRot;
-    int i, j, k, l;
-    int m = S.length();
-    
-    T.SetLength(m*n);
-    for(i = 0; i < (m*n); i++)
-        T[i].SetLength(m*n);
-    
-    for(i = 0; i < m; i++) {
-        this->Rot(outInnerRot, S[i], m, n);        
-        for(j = 0; j < n; j++) // For each row
-            T[i*n + j] = outInnerRot[j];
-    }//end-for    
-    
-}//end-RotBasis()
-
-void Samplers::RotBasis(Vec< Vec<int> >& T, const Vec< Vec<ZZX> >& S, int n) {
+void Samplers::RotBasis(mat_ZZ& T, const Vec< Vec<ZZX> >& S, int n) {
     
     /*
      * Input:
@@ -706,9 +695,7 @@ void Samplers::RotBasis(Vec< Vec<int> >& T, const Vec< Vec<ZZX> >& S, int n) {
     int i, j, k, l;
     int m = S.length();
     
-    T.SetLength(m*n);
-    for(i = 0; i < (m*n); i++)
-        T[i].SetLength(m*n);
+    T.SetDims(m*n, m*n);
     
     for(i = 0; i < m; i++) {
         this->Rot(outInnerRot, S[i], m, n);        
@@ -719,6 +706,45 @@ void Samplers::RotBasis(Vec< Vec<int> >& T, const Vec< Vec<ZZX> >& S, int n) {
     }//end-for    
     
 }//end-RotBasis()
+
+/* Applies the rot operator component-wise in a row vector a */
+void Samplers::Rot(Vec< Vec<ZZX> >& A, const Vec<ZZX>& a, int m, int n) {
+    
+    Vec<ZZX> out;
+    int i, j;
+    
+    A.SetLength(n);    
+    for(i = 0; i < n; i++) {
+        A[i].SetLength(m);
+        for(j = 0; j < m; j++)
+            A[i][j].SetLength(n);
+    }//end-for
+    
+    for(j = 0; j < m; j++) {
+        this->rot(out, a[j], n);
+        for(i = 0; i < n; i++)
+            A[i][j] = out[i];
+    }//end-for
+    
+}//end-Rot()
+
+void Samplers::rot(Vec<ZZX>& out, const ZZX& b, int n) {
+    
+    ZZX isometry;   
+    out.SetLength(n); 
+    
+    out[0].SetLength(n);
+    isometry.SetLength(n);
+    
+    out[0] = isometry = b;
+    
+    for(int i = 1; i < n; i++) {
+        isometry = this->Isometry(isometry, n);
+        out.SetLength(n);
+        out[i] = isometry;
+    }//end-for
+   
+}//end-rot()
 
 void Samplers::RotBasis(Vec<ZZX>& T, const Vec< Vec<ZZX> >& S, int n) {
     
@@ -742,47 +768,6 @@ void Samplers::RotBasis(Vec<ZZX>& T, const Vec< Vec<ZZX> >& S, int n) {
         
 }//end-RotBasis()
 
-/* Applies the rot operator component-wise in a row vector a */
-void Samplers::Rot(Vec< Vec<ZZX> >& A, const Vec<ZZX>& a, int m, int n) {
-    
-    Vec<ZZX> out;
-    int i, j;
-    
-    A.SetLength(n);    
-    for(i = 0; i < n; i++) {
-        A[i].SetLength(m);
-        for(j = 0; j < m; j++)
-            A[i][j].SetLength(n);
-    }//end-for
-    
-    for(j = 0; j < m; j++) {
-        this->rot(out, a[j], n);
-        for(i = 0; i < n; i++) {
-            A[i][j] = out[i];
-            A[i][j].normalize();
-        }//end-for
-    }//end-for
-    
-}//end-Rot()
-
-void Samplers::rot(Vec<ZZX>& out, const ZZX& b, int n) {
-    
-    ZZX isometry;   
-    out.SetLength(n); 
-    
-    out[0].SetLength(n);
-    isometry.SetLength(n);
-    
-    out[0] = isometry = b;
-    
-    for(int i = 1; i < n; i++) {
-        isometry = this->Isometry(isometry, n);
-        out.SetLength(n);
-        out[i] = isometry;
-    }//end-for
-   
-}//end-rot()
-
 void Samplers::rot(mat_RR& out, const vec_RR& b, int n) {
         
     vec_RR isometry;
@@ -800,11 +785,11 @@ void Samplers::rot(mat_RR& out, const vec_RR& b, int n) {
     
 }//end-rot()
 
-void Samplers::SetCenter(vec_RR& c, const Vec< Vec<int> >& S) {
+void Samplers::SetCenter(vec_RR& c, const mat_ZZ& S) {
     
     int cols, rows;    
-    cols = S[0].length();
-    rows = S.length();
+    cols = S.NumCols();
+    rows = S.NumRows();
     
     c.SetLength(rows);
     RR acc = to_RR(0);
@@ -818,12 +803,47 @@ void Samplers::SetCenter(vec_RR& c, const Vec< Vec<int> >& S) {
     
 }//end-SetCenter()
 
+void Samplers::PrepareToSampleCGS(const vec_RR& B1, const mat_RR& BTilde) {
+    
+    int cols, rows;
+    
+    cols = BTilde.NumCols();
+    rows = BTilde.NumRows();
+    
+    mat_RR v;
+    vec_RR C, D, H, I, mult;
+    RR di;
+    int i;
+    
+    v.SetDims(rows, cols);
+    C.SetLength(rows-1); // From 1 to (n-1)
+    D.SetLength(rows);
+    H.SetLength(rows-1); // From 1 to (n-1)
+    I.SetLength(rows-1); // From 1 to (n-1)
+    
+    
+    NTL::InnerProduct(D[0], BTilde[0], BTilde[0]);
+    for(i = 1; i < rows; i++) {
+        NTL::InnerProduct(D[i], BTilde[i], BTilde[i]);
+        div(H[i-1], D[i-1], D[i]);        
+    }//end-for
+    
+    v[0] = B1;
+    for(i = 0; i < (rows-1); i++) {
+        NTL::InnerProduct(C[i], v[i], this->Isometry(BTilde[i], BTilde[i].length()));
+        div(I[i], C[i], D[i+1]);
+        div(di, C[i], D[i]);
+        mul(mult, this->Isometry(BTilde[i], BTilde[i].length()), di);
+        sub(v[i+1], v[i], mult);
+    }//end-for    
+    
+}
 
 vec_RR Samplers::CompactGaussianSampler(const Vec< Vec<int> >& B, RR sigma, const vec_RR center, const vec_RR& BTilden, const vec_RR& Vn, const vec_RR& H, const vec_RR& I) {
     
 }
 
-vec_RR Samplers::GaussianSamplerFromLattice(const Vec< Vec<int> >& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center) {
+vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center) {
 
     cout << "\n[*] Gaussian Sampler status: ";
     
@@ -832,7 +852,7 @@ vec_RR Samplers::GaussianSamplerFromLattice(const Vec< Vec<int> >& B, const mat_
     vec_RR C, sample;
     int Z;
     
-    RR d, innerp, sigma_i;
+    RR d, innerp, innerp1, sigma_i;
     int cols, i, j, rows;
     
     cols = BTilde.NumCols();
@@ -847,10 +867,11 @@ vec_RR Samplers::GaussianSamplerFromLattice(const Vec< Vec<int> >& B, const mat_
      * in the inner product space H */
     for(i = rows-1; i >= 0; i--) {
         
-        innerp = this->InnerProduct(BTilde[i], BTilde[i]);
+        NTL::InnerProduct(innerp, BTilde[i], BTilde[i]);
+        NTL::InnerProduct(innerp1, C, BTilde[i]);
         
         // The new center for the discrete Gaussian
-        div(d, this->InnerProduct(C, BTilde[i]), innerp);        
+        div(d, innerp1, innerp);
         
         // And the new standard deviation
         div(sigma_i, sigma, sqrt(innerp));
@@ -862,7 +883,7 @@ vec_RR Samplers::GaussianSamplerFromLattice(const Vec< Vec<int> >& B, const mat_
         
         Z = this->KnuthYao(tailcut, sigma_i, d);
         
-        for(j = 0; j < B.length(); j++)
+        for(j = 0; j < B.NumCols(); j++)
             C[j] = C[j] - to_RR(B[i][j]*Z);
         
     }//end-for
@@ -885,7 +906,7 @@ ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde
     int Z;
     
     vec_RR auxC;
-    RR d, norm, sigma_i;
+    RR d, innerp1, innerp2, norm, sigma_i;
     int i, j, mn;
     
     mn = B.length(); // mn = (m1 + m2) * n
@@ -906,8 +927,11 @@ ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde
         for(j = 0; j < n; j++)
             auxC[j] = to_RR(C[j]);
         
+        NTL::InnerProduct(innerp1, auxC, BTilde[i]);
+        NTL::InnerProduct(innerp2, BTilde[i], BTilde[i]);
+        
         // The new center for the discrete Gaussian
-        div(d, this->InnerProduct(auxC, BTilde[i]), this->InnerProduct(BTilde[i], BTilde[i]));        
+        div(d, innerp1, innerp2);        
         
         // And the new standard deviation
         div(sigma_i, sigma, norm);
@@ -981,28 +1005,15 @@ double Samplers::InnerProduct(const Vec<int>& a, const Vec<double>& b) {
     
 }//end-InnerProduct()
 
-RR Samplers::InnerProduct(const vec_RR& a, const vec_RR& b) {
-    
-    RR innerp, mult;
-    innerp = to_RR(0);
-    
-    for(int i = 0; i < a.length(); i++) {
-        mul(mult, a[i], b[i]);
-        innerp += mult;
-    }//end-for
-    
-    return innerp;
-    
-}//end-InnerProduct()
-
 RR Samplers::NormOfBasis(const mat_RR& B) {
     
-    RR norm, normB;    
+    RR innerp, norm, normB;    
     
     normB = to_RR(0);
     
     for(int i = 0; i < B.NumRows(); i++) {
-        norm = this->Norm(B[i], B.NumCols());
+        NTL::InnerProduct(innerp, B[i], B[i]);
+        norm = sqrt(innerp); // Norm
         if(norm > normB)
             normB = norm;
     }//end-for

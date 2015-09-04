@@ -36,22 +36,22 @@ int main(void) {
 */
     
     /* Intermediate parameter set */
-
+/*
     h = 10;
     k = 6; // n = 2^k is the degree of polynomials in R and R_0
     q = 1019; //q must be prime and congruent to 3 mod 8
     m1 = 11;
     m2 = 122; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
-
+*/
     
     /* Toy parameter set */
-/*
+
     h = 10;
     k = 2; // n = 2^k is the degree of polynomials in R and R_0
     q = 11; //q must be prime and congruent to 3 mod 8
     m1 = 5;
     m2 = 30; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
-*/
+/**/
     
     r = ceil((double)(1 + (log(q)/log(3))));
     lambda = ceil(1 + (log(q)/log(2)));
@@ -151,7 +151,7 @@ int main(void) {
             long precision;
             
             sigmaRR = to_RR(3.195);
-            precision = 20;
+            precision = 107;
             tailcut = 13;
 
             zero = to_RR(0);           
@@ -173,29 +173,29 @@ int main(void) {
              */
 
              /* Short basis expansion */
-            Vec< Vec<int> > S;
+            mat_ZZ S;
             mat_RR T, TTilde;
             RR normTTilde;
 
             int i, j, length, n;
             n = hibe->GetN();
 
-            hibe->GetSampler()->RotBasis(S, hibe->GetMsk(), n);   
-
-            length = S.length();
+            hibe->GetSampler()->RotBasis(S, hibe->GetMsk(), n);
+            
+            length = S.NumRows();
             T.SetDims(length, length);
 
             for(i = 0; i < T.NumRows(); i++)
                 for(j = 0; j < T.NumCols(); j++)
                     T[i][j] = to_RR(S[i][j]);
-
+                       
 #ifdef DEBUG
             cout << "/** Master secret key **/" << endl;                
             cout << hibe->GetMsk() << endl;
 
             cout << "\n/** S as an integer matrix **/" << endl;
-            for(i = 0; i < (m*n); i++) {
-                cout << outRot[i] << endl;
+            for(i = 0; i < S.length(); i++) {
+                cout << S[i] << endl;
                 if((i+1) % n == 0)
                     cout << endl;
             }//end-for
@@ -220,21 +220,21 @@ int main(void) {
             }//end-for
 #endif
 
-            return 0;
+//            return 0;
 
             sigmaRR = normTTilde*(log(2*hibe->GetN())/log(2)) + 1;
 
-            vec_RR c, sample;                
-            hibe->GetSampler()->SetCenter(c, S);
-            cout << "[!] Center of distribution: " << c << endl;
+            vec_RR center, sample;                
+            hibe->GetSampler()->SetCenter(center, S);
+//            cout << "[!] Center of distribution: " << center << endl;
 
-            nIterations = 10;
+            nIterations = 1;
             
             for(it = 0; it < nIterations; it++) {
             
                 /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c} - (Lyubashevsky, and Prest, 2015), Algorithm 8 */
                 ts_start = get_timestamp();    
-                sample = hibe->GetSampler()->GaussianSamplerFromLattice(S, TTilde, sigmaRR, precision, tailcut, c);            
+                sample = hibe->GetSampler()->GaussianSamplerFromLattice(S, TTilde, sigmaRR, precision, tailcut, center);            
                 ts_end = get_timestamp();    
 
                 avgGaussianSampler += (ts_end - ts_start);

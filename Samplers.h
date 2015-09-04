@@ -28,19 +28,22 @@ public:
     virtual ~Samplers();
     
     /* The center of distribution is the norm of public basis */
-    void SetCenter(vec_RR& c, const Vec< Vec<int> >& S);
+    void SetCenter(vec_RR& c, const mat_ZZ& S);
     
     /* Generic algorithm for GSO basis construction */
     RR GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precision);
     
     /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c}*/
     vec_RR CompactGaussianSampler(const Vec< Vec<int> >& B, RR sigma, const vec_RR center, const vec_RR& BTilden, const vec_RR& Vn, const vec_RR& H, const vec_RR& I);    
-    vec_RR GaussianSamplerFromLattice(const Vec< Vec<int> >& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center);
+    vec_RR GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center);
+    
+    void PrepareToSampleCGS(const vec_RR& B1, const mat_RR& BTilde);
+    
     
     /* Continuous sampling */
     RR Ziggurat(int m, RR sigma, int precision, RR tail);
     
-    void RotBasis(Vec< Vec<int> >& T, const Vec< Vec<ZZX> >& S, int n);
+    void RotBasis(mat_ZZ& T, const Vec< Vec<ZZX> >& S, int n);
     void RotBasis(Vec<ZZX>& T, const Vec< Vec<ZZX> >& S, int n);
     
 private:
@@ -83,7 +86,7 @@ private:
     /* Subroutine of Block_GSO algorithm - it produces the reduced form of an isometric basis */    
     void FasterIsometricGSO(mat_RR& BTilde, const mat_RR& B);
     
-    vec_RR Isometry(vec_RR& b, int n);
+    vec_RR Isometry(const vec_RR& b, int n);
     ZZX Isometry(ZZX& b, int n);
     
     void Rot(Vec< Vec<ZZX> >& A, const Vec<ZZX>& a, int m, int n); // RotBasis()
