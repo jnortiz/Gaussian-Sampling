@@ -17,10 +17,14 @@
 #include <stdio.h>
 #include <NTL/c_lip.h>
 #include <NTL/ZZX.h>
-//#include <complex>
-//#include <NTL/quad_float.h>
-//#include <cmath>
-//#include <omp.h>
+
+typedef unsigned long long timestamp_t;
+
+static timestamp_t get_timestamp() {
+    struct timespec now;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+    return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
+}
 
 using namespace NTL;
 using namespace std;
@@ -412,34 +416,6 @@ RR Samplers::NewMarsagliaTailMethod(RR r) {
     
 }//end-NewMarsagliaTailMethod()
 
-/* Computing of <a,b> and <b,b> all same dimension */
-void TwoInnerProducts(RR& IP1, RR& IP2, const vec_RR& a, const vec_RR& b) {
-    
-    vec_RR buffer1, buffer2;
-    RR auxIP1, auxIP2;
-    
-    int length = a.length();
-    
-    buffer1.SetLength(length);
-    buffer2.SetLength(length);
-    
-    auxIP1 = auxIP2 = to_RR(0);
-    
-    for(int i = 0; i < length; i++) {
-        mul(buffer1[i], a[i], b[i]);
-        mul(buffer2[i], b[i], b[i]);
-    }//end-for
-    
-    for(int i = 0; i < length; i++) {
-        add(auxIP1, auxIP1, buffer1[i]);
-        add(auxIP2, auxIP2, buffer2[i]);
-    }//end-for
-    
-    IP1 = auxIP1;
-    IP2 = auxIP2;
-    
-}//end-TwoInnerProducts
-
 RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precision) {
     
     RR::SetPrecision(precision);
@@ -447,9 +423,9 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     cout << "\n[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
     cout << "[*] Gram-Schmidt process status: ";
     
-    mat_RR mu;
-    vec_RR mult;
-    RR inner1, inner2;
+    timestamp_t start, end;
+    vec_RR mult, sum;
+    RR inner1, inner2, mu;
     int cols, rows;
     
     cols = T_A.NumCols();
@@ -457,16 +433,28 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     
     T_ATilde.SetDims(rows, cols);
     mult.SetLength(cols);
+    sum.SetLength(cols);
     
-    T_ATilde = T_A;
+    T_ATilde[0] = T_A[0];
     
-    for(int i = 1; i < rows; i++)
+    for(int i = 1; i < rows; i++) {
+        
+        start = get_timestamp();
+        T_ATilde[i] = T_A[i];        
+        
         for(int j = 0; j < i; j++) {
-            TwoInnerProducts(inner1, inner2, T_A[i], T_ATilde[j]);
-            div(mu[i][j], inner1, inner2);
-            mul(mult, T_ATilde[j], mu[i][j]);
+            NTL::InnerProduct(inner1, T_A[i], T_ATilde[j]);
+            NTL::InnerProduct(inner2, T_ATilde[j], T_ATilde[j]);
+            div(mu, inner1, inner2);
+            mul(mult, T_ATilde[j], mu);
             sub(T_ATilde[i], T_ATilde[i], mult);
         }//end-for
+        
+        end = get_timestamp();
+        
+        cout << "Elapsed time for " << i << "-th iteration: " << (float)((end - start)/1000000000.0) << " s." << endl;       
+        
+    }//end-for
     
     cout << "Pass!" << endl;    
     RR norm = this->NormOfBasis(T_ATilde);
