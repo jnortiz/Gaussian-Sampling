@@ -36,16 +36,15 @@ int main(void) {
 */
     
     /* Intermediate parameter set */
-/*
+
     h = 10;
     k = 6; // n = 2^k is the degree of polynomials in R and R_0
     q = 1019; //q must be prime and congruent to 3 mod 8
     m1 = 11;
     m2 = 122; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
-*/
     
     /* Toy parameter set */
-
+/*
     h = 10;
     k = 2; // n = 2^k is the degree of polynomials in R and R_0
     q = 11; //q must be prime and congruent to 3 mod 8
@@ -212,6 +211,8 @@ int main(void) {
             cout << "[!] Gram-Schmidt orthogonalization process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
             cout << "[!] Norm of Gram-Schmidt reduced basis: " << normTTilde << endl;            
 
+            return 0;
+            
 #ifdef DEBUG                
             for(i = 0; i < TTilde.NumRows(); i++) {
                 cout << TTilde[i];

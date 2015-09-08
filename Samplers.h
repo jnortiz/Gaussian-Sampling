@@ -38,8 +38,7 @@ public:
     vec_RR GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center);
     
     void PrepareToSampleCGS(const vec_RR& B1, const mat_RR& BTilde);
-    
-    
+        
     /* Continuous sampling */
     RR Ziggurat(int m, RR sigma, int precision, RR tail);
     
@@ -48,8 +47,6 @@ public:
     
 private:
         
-    mat_RR TTilde;
-    
     /* Attributes for sampling from lattice */
     ZZ_pX f;// Polynomial R = Z_p[X]/f    
     
