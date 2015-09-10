@@ -69,6 +69,7 @@ private:
         
     /* Algorithms for Gram-Schmidt orthogonalization */
     double GramSchmidtProcess(Vec< Vec<double> >& T_ATilde, const Vec< Vec<int> >& T_A);
+    int FinalVerificationGSO(const mat_RR& T_A, const mat_RR& T_ATilde, const mat_RR& mu);
     /* Algorithm for generating the Gram-Schmidt reduced basis for block isometric basis */    
     RR BlockGSO(mat_RR& BTilde, const Vec<ZZX>& B, int n, int precision);
     void FasterIsometricGSO(mat_RR& BTilde, const mat_RR& B);
@@ -81,7 +82,7 @@ private:
     /* Procedure for T = BB^t used in Peikert algorithm - Lattice sampling */
     void CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<double> >& A, int n);    
         
-    vec_RR Isometry(const vec_RR& b, int n);
+    vec_RR Isometry(const vec_RR& b);
     ZZX Isometry(ZZX& b, int n);    
     void Rot(Vec< Vec<ZZX> >& A, const Vec<ZZX>& a, int m, int n); // RotBasis()
     void rot(Vec<ZZX>& out, const ZZX& b, int n); // Rot()

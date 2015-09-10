@@ -44,8 +44,8 @@ OBJECTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=-lntl -lgmp -lm -fopenmp
-CXXFLAGS=-lntl -lgmp -lm -fopenmp
+CCFLAGS=-L$HOME/sw/lib -lntl -lgmp -lm -fopenmp
+CXXFLAGS=-L$HOME/sw/lib -lntl -lgmp -lm -fopenmp
 
 # Fortran Compiler Flags
 FFLAGS=
@@ -67,17 +67,17 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/pke-peks: ${OBJECTFILES}
 ${OBJECTDIR}/HIBE.o: HIBE.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/HIBE.o HIBE.cpp
+	$(COMPILE.cc) -g -I$HOME/sw/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/HIBE.o HIBE.cpp
 
 ${OBJECTDIR}/Samplers.o: Samplers.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Samplers.o Samplers.cpp
+	$(COMPILE.cc) -g -I$HOME/sw/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Samplers.o Samplers.cpp
 
 ${OBJECTDIR}/main.o: main.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
+	$(COMPILE.cc) -g -I$HOME/sw/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
 
 # Subprojects
 .build-subprojects:

@@ -5,7 +5,6 @@
  * Created on March 10, 2015, 4:12 PM
  */
 
-#include <NTL/ZZXFactoring.h>
 #include <NTL/ZZ_pXFactoring.h>
 #include <NTL/ZZ.h>
 #include <NTL/ZZ_pEX.h>

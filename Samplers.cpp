@@ -15,24 +15,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <NTL/c_lip.h>
 #include <NTL/ZZX.h>
-
-#define PARALLEL 1
-
-typedef unsigned long long timestamp_t;
-
-static timestamp_t get_timestamp() {
-    struct timespec now;
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
-    return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
-}
 
 using namespace NTL;
 using namespace std;
 
 Samplers::Samplers(int q, const ZZ_pX& f) {
-    
+
+/*     
     int randint;
     int bytes_read;
     int fd = open("/dev/urandom", O_RDONLY);
@@ -47,6 +37,7 @@ Samplers::Samplers(int q, const ZZ_pX& f) {
     close(fd);
           
     NTL::SetSeed(to_ZZ(randint));    
+*/
     
     ZZ_p::init(conv<ZZ>(q)); // Coefficients modulo
     this->f = f;
@@ -425,83 +416,22 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     cout << "\n[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
     cout << "[*] Gram-Schmidt process status: ";
     
-#ifdef PARALLEL
-    
-    vec_RR mult, sum, innerpT_ATilde;
-    RR inner1, inner2, mu;
-    int cols, rows;
-    
-    cols = T_A.NumCols();
-    rows = T_A.NumRows();
-    
-    T_ATilde.SetDims(rows, cols);
-    mult.SetLength(cols);
-    sum.SetLength(cols);
-    innerpT_ATilde.SetLength(rows);
-    
-    vec_RR reduceSum;
-    reduceSum.SetLength(cols);
-    
-    T_ATilde[0] = T_A[0];
-    
-#pragma omp parallel num_threads(2) private(sum, mult)
-{
-
-    for(int i = 1; i < rows; i++) {        
-        vec_RR sum, mult;
-        sum.SetLength(cols);
-        mult.SetLength(cols);
-
-#pragma omp for schedule(guided) private(inner1, mu)
-        for(int j = 0; j < (i-1); j++) {
-            RR inner1, mu;
-            NTL::InnerProduct(inner1, T_A[i], T_ATilde[j]);
-            div(mu, inner1, innerpT_ATilde[j]);
-            mul(mult, T_ATilde[j], mu);
-            add(sum, sum, mult);
-        }//end-for
-
-#pragma omp single // The first thread that reaches this block will compute the last iteration of the inner-most loop
-{      
-        RR inner1, mu;
-        NTL::InnerProduct(inner1, T_A[i], T_ATilde[i-1]);
-        NTL::InnerProduct(innerpT_ATilde[i-1], T_ATilde[i-1], T_ATilde[i-1]);
-        div(mu, inner1, innerpT_ATilde[i-1]);
-        mul(mult, T_ATilde[i-1], mu);
-        add(sum, sum, mult);
-}
-        
-#pragma omp critical // Each thread adds its partial sum into the reduction variable
-        add(reduceSum, sum, sum);
-#pragma omp barrier
-        
-#pragma omp master // The master thread computes the new value of ~T[i]
-{        
-            sub(T_ATilde[i], T_A[i], reduceSum);        
-            cout << "Iteration #" << i << " just finished." << endl;
-         
-}
-    }//end-for
-    
-}//end-parallel-area
-    
-    cout << "Pass!" << endl;    
-    RR norm = this->NormOfBasis(T_ATilde);
-
-    return norm;
-    
-#else
-    
+    mat_RR mu;
     vec_RR mult, sum;
-    RR inner1, inner2, mu;
+    RR inner1, inner2;
     int cols, rows;
     
     cols = T_A.NumCols();
     rows = T_A.NumRows();
     
+    mu.SetDims(rows, cols);
     T_ATilde.SetDims(rows, cols);
     mult.SetLength(cols);
     sum.SetLength(cols);
+    
+    // Diagonal is unary
+    for(int i = 0; i < rows; i++)            
+        mu[i][i] = to_RR(1);
     
     T_ATilde[0] = T_A[0];
     
@@ -512,21 +442,37 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
         for(int j = 0; j < i; j++) {
             NTL::InnerProduct(inner1, T_A[i], T_ATilde[j]);
             NTL::InnerProduct(inner2, T_ATilde[j], T_ATilde[j]);
-            div(mu, inner1, inner2);
-            mul(mult, T_ATilde[j], mu);
+            div(mu[i][j], inner1, inner2);
+            mul(mult, T_ATilde[j], mu[i][j]);
             sub(T_ATilde[i], T_ATilde[i], mult);
         }//end-for
                 
     }//end-for
     
-    cout << "Pass!" << endl;    
-    RR norm = this->NormOfBasis(T_ATilde);
-
-    return norm;
-    
-#endif
+    if(this->FinalVerificationGSO(T_A, T_ATilde, mu)) {
+        cout << "Pass!" << endl;
+        RR norm = this->NormOfBasis(T_ATilde);
+        return norm;
+    } else {
+        cout << "Error!" << endl;
+        return to_RR(-1);
+    }
     
 }//end-GramSchmidtProcess() 
+
+int Samplers::FinalVerificationGSO(const mat_RR& T_A, const mat_RR& T_ATilde, const mat_RR& mu) {
+    
+    mat_RR subt, mult;
+    
+    mult.SetDims(T_A.NumRows(), T_A.NumCols());
+    subt.SetDims(T_A.NumRows(), T_A.NumCols());
+    
+    NTL::mul(mult, mu, T_ATilde);
+    NTL::sub(subt, mult, T_A);
+    
+    return NTL::IsZero(subt);
+    
+}//end-FinalVerificationGSO()
 
 double Samplers::GramSchmidtProcess(Vec< Vec<double> >& T_ATilde, const Vec< Vec<int> >& T_A) {
     
@@ -709,17 +655,17 @@ void Samplers::FasterIsometricGSO(mat_RR& BTilde, const mat_RR& B) {
     BTilde[0] = B[0];
     V = B[0];
     
-    NTL::InnerProduct(C[0], V, this->Isometry(BTilde[0], n));
+    NTL::InnerProduct(C[0], V, this->Isometry(BTilde[0]));
     NTL::InnerProduct(D[0], BTilde[0], BTilde[0]);
     
     for(int i = 0; i < n-1; i++) {        
         div(CD, C[i], D[i]);        
-        isometry = this->Isometry(BTilde[i], n);         
+        isometry = this->Isometry(BTilde[i]);         
         mul(mult, V, CD);                
         sub(BTilde[i+1], isometry, mult);            
         mul(mult, isometry, CD);        
         sub(V, V, mult);
-        NTL::InnerProduct(C[i+1], B[0], this->Isometry(BTilde[i+1], n));
+        NTL::InnerProduct(C[i+1], B[0], this->Isometry(BTilde[i+1]));
         sub(D[i+1], D[i], CD*C[i]);                
     }//end-for
     
@@ -743,10 +689,12 @@ ZZX Samplers::Isometry(ZZX& b, int n) {
     
 }//end-Isometry()
 
-vec_RR Samplers::Isometry(const vec_RR& b, int n) {
+vec_RR Samplers::Isometry(const vec_RR& b) {
     
+    int n = b.length();    
     vec_RR out;    
     out.SetLength(n);
+    
         
     out[0] = -b[n-1];    
     for(int i = 1; i < n; i++)
@@ -776,7 +724,7 @@ void Samplers::RotBasis(mat_ZZ& T, const Vec< Vec<ZZX> >& S, int n) {
         for(j = 0; j < n; j++) // For each row
             for(k = 0; k < m; k++) // For each column
                 for(l = 0; l < n; l++) // For each coefficient in S[i][j]
-                    T[i*n+j][k*n+l] = to_int(outInnerRot[j][k][l]);                        
+                    T[i*n+j][k*n+l] = to_ZZ(outInnerRot[j][k][l]);                        
     }//end-for    
     
 }//end-RotBasis()
@@ -853,7 +801,7 @@ void Samplers::rot(mat_RR& out, const vec_RR& b, int n) {
     isometry = b;    
     
     for(int i = 1; i < n; i++) {
-        isometry = this->Isometry(isometry, n);
+        isometry = this->Isometry(isometry);
         out[i] = isometry;
     }//end-for
     
@@ -904,10 +852,10 @@ void Samplers::PrepareToSampleCGS(const vec_RR& B1, const mat_RR& BTilde) {
     
     v[0] = B1;
     for(i = 0; i < (rows-1); i++) {
-        NTL::InnerProduct(C[i], v[i], this->Isometry(BTilde[i], BTilde[i].length()));
+        NTL::InnerProduct(C[i], v[i], this->Isometry(BTilde[i]));
         div(I[i], C[i], D[i+1]);
         div(di, C[i], D[i]);
-        mul(mult, this->Isometry(BTilde[i], BTilde[i].length()), di);
+        mul(mult, this->Isometry(BTilde[i]), di);
         sub(v[i+1], v[i], mult);
     }//end-for    
     
