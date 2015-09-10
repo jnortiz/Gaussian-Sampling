@@ -444,9 +444,7 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     
     T_ATilde[0] = T_A[0];
     
-    // Armazenar valores já calculados de <.,.>
-    
-#pragma omp parallel private(sum, mult)
+#pragma omp parallel num_threads(2) private(sum, mult)
 {
 
     for(int i = 1; i < rows; i++) {        
@@ -454,20 +452,29 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
         sum.SetLength(cols);
         mult.SetLength(cols);
 
-#pragma omp for schedule(guided) private(inner1, inner2, mu)
-        for(int j = 0; j < i; j++) {
-            RR inner1, inner2, mu;
+#pragma omp for schedule(guided) private(inner1, mu)
+        for(int j = 0; j < (i-1); j++) {
+            RR inner1, mu;
             NTL::InnerProduct(inner1, T_A[i], T_ATilde[j]);
-            NTL::InnerProduct(inner2, T_ATilde[j], T_ATilde[j]);
-            div(mu, inner1, inner2);
+            div(mu, inner1, innerpT_ATilde[j]);
             mul(mult, T_ATilde[j], mu);
             add(sum, sum, mult);
         }//end-for
+
+#pragma omp single // The first thread that reaches this block will compute the last iteration of the inner-most loop
+{      
+        RR inner1, mu;
+        NTL::InnerProduct(inner1, T_A[i], T_ATilde[i-1]);
+        NTL::InnerProduct(innerpT_ATilde[i-1], T_ATilde[i-1], T_ATilde[i-1]);
+        div(mu, inner1, innerpT_ATilde[i-1]);
+        mul(mult, T_ATilde[i-1], mu);
+        add(sum, sum, mult);
+}
         
 #pragma omp critical // Each thread adds its partial sum into the reduction variable
         add(reduceSum, sum, sum);
-
-#pragma omp barrier        
+#pragma omp barrier
+        
 #pragma omp master // The master thread computes the new value of ~T[i]
 {        
             sub(T_ATilde[i], T_A[i], reduceSum);        

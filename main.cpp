@@ -35,7 +35,7 @@ int main(void) {
 */
     
     /* Intermediate parameter set */
-
+/*
     h = 10;
     k = 6; // n = 2^k is the degree of polynomials in R and R_0
     q = 1019; //q must be prime and congruent to 3 mod 8
@@ -43,7 +43,7 @@ int main(void) {
     m2 = 122; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
     
     /* Toy parameter set */
-/*
+    
     h = 10;
     k = 2; // n = 2^k is the degree of polynomials in R and R_0
     q = 11; //q must be prime and congruent to 3 mod 8
