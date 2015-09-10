@@ -6,7 +6,6 @@
  */
 
 #include <cstdlib>
-#include <cstdint>
 #include <math.h>
 #include <NTL/RR.h>
 #include "HIBE.h"
@@ -36,7 +35,7 @@ int main(void) {
 */
     
     /* Intermediate parameter set */
-/*
+
     h = 10;
     k = 6; // n = 2^k is the degree of polynomials in R and R_0
     q = 1019; //q must be prime and congruent to 3 mod 8
@@ -44,7 +43,7 @@ int main(void) {
     m2 = 122; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
     
     /* Toy parameter set */
-
+/*
     h = 10;
     k = 2; // n = 2^k is the degree of polynomials in R and R_0
     q = 11; //q must be prime and congruent to 3 mod 8
@@ -98,7 +97,7 @@ int main(void) {
             break;
         }
         case 1: { // Cholesky decomposition
-//                        
+//                        Dahab disse que 
 //            
 //            /* Basis generation phase - (Mochetti, and Dahab, 2014) and (Stehlé et al., 2009) */
 //            hibe->Setup(h);
@@ -211,6 +210,12 @@ int main(void) {
             cout << "[!] Gram-Schmidt orthogonalization process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
             cout << "[!] Norm of Gram-Schmidt reduced basis: " << normTTilde << endl;            
 
+            for(i = 0; i < TTilde.NumRows(); i++) {
+                cout << TTilde[i];
+                if((i+1) % TTilde.NumCols())
+                    cout << endl;
+            }//end-for
+            
             return 0;
             
 #ifdef DEBUG                

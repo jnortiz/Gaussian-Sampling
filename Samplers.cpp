@@ -18,6 +18,8 @@
 #include <NTL/c_lip.h>
 #include <NTL/ZZX.h>
 
+#define PARALLEL 1
+
 typedef unsigned long long timestamp_t;
 
 static timestamp_t get_timestamp() {
@@ -423,7 +425,66 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     cout << "\n[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
     cout << "[*] Gram-Schmidt process status: ";
     
-    timestamp_t start, end;
+#ifdef PARALLEL
+    
+    vec_RR mult, sum, innerpT_ATilde;
+    RR inner1, inner2, mu;
+    int cols, rows;
+    
+    cols = T_A.NumCols();
+    rows = T_A.NumRows();
+    
+    T_ATilde.SetDims(rows, cols);
+    mult.SetLength(cols);
+    sum.SetLength(cols);
+    innerpT_ATilde.SetLength(rows);
+    
+    vec_RR reduceSum;
+    reduceSum.SetLength(cols);
+    
+    T_ATilde[0] = T_A[0];
+    
+    // Armazenar valores já calculados de <.,.>
+    
+#pragma omp parallel private(sum, mult)
+{
+
+    for(int i = 1; i < rows; i++) {        
+        vec_RR sum, mult;
+        sum.SetLength(cols);
+        mult.SetLength(cols);
+
+#pragma omp for schedule(guided) private(inner1, inner2, mu)
+        for(int j = 0; j < i; j++) {
+            RR inner1, inner2, mu;
+            NTL::InnerProduct(inner1, T_A[i], T_ATilde[j]);
+            NTL::InnerProduct(inner2, T_ATilde[j], T_ATilde[j]);
+            div(mu, inner1, inner2);
+            mul(mult, T_ATilde[j], mu);
+            add(sum, sum, mult);
+        }//end-for
+        
+#pragma omp critical // Each thread adds its partial sum into the reduction variable
+        add(reduceSum, sum, sum);
+
+#pragma omp barrier        
+#pragma omp master // The master thread computes the new value of ~T[i]
+{        
+            sub(T_ATilde[i], T_A[i], reduceSum);        
+            cout << "Iteration #" << i << " just finished." << endl;
+         
+}
+    }//end-for
+    
+}//end-parallel-area
+    
+    cout << "Pass!" << endl;    
+    RR norm = this->NormOfBasis(T_ATilde);
+
+    return norm;
+    
+#else
+    
     vec_RR mult, sum;
     RR inner1, inner2, mu;
     int cols, rows;
@@ -439,7 +500,6 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     
     for(int i = 1; i < rows; i++) {
         
-        start = get_timestamp();
         T_ATilde[i] = T_A[i];        
         
         for(int j = 0; j < i; j++) {
@@ -449,17 +509,15 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
             mul(mult, T_ATilde[j], mu);
             sub(T_ATilde[i], T_ATilde[i], mult);
         }//end-for
-        
-        end = get_timestamp();
-        
-        cout << "Elapsed time for " << i << "-th iteration: " << (float)((end - start)/1000000000.0) << " s." << endl;       
-        
+                
     }//end-for
     
     cout << "Pass!" << endl;    
     RR norm = this->NormOfBasis(T_ATilde);
 
     return norm;
+    
+#endif
     
 }//end-GramSchmidtProcess() 
 

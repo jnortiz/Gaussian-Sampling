@@ -40,7 +40,7 @@
       </toolsSet>
       <compileType>
         <ccTool>
-          <commandLine>-std=c++11 -lntl -lgmp -lm -fopenmp</commandLine>
+          <commandLine>-O3 -lntl -lgmp -lm -fopenmp</commandLine>
         </ccTool>
       </compileType>
       <item path="HIBE.cpp" ex="false" tool="1" flavor2="0">

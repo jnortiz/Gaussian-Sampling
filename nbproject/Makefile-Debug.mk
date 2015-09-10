@@ -44,8 +44,8 @@ OBJECTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=-std=c++11 -lntl -lgmp -lm -fopenmp
-CXXFLAGS=-std=c++11 -lntl -lgmp -lm -fopenmp
+CCFLAGS=-O3 -lntl -lgmp -lm -fopenmp
+CXXFLAGS=-O3 -lntl -lgmp -lm -fopenmp
 
 # Fortran Compiler Flags
 FFLAGS=

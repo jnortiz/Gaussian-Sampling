@@ -86,7 +86,7 @@ private:
     void Rot(Vec< Vec<ZZX> >& A, const Vec<ZZX>& a, int m, int n); // RotBasis()
     void rot(Vec<ZZX>& out, const ZZX& b, int n); // Rot()
     void rot(mat_RR& out, const vec_RR& b, int n); // BlockGSO()    
-    RR InnerProduct(const vec_RR& a, const vec_RR& b);    
+    
     double InnerProduct(const Vec<int>& a, const Vec<int>& b);
     double InnerProduct(const Vec<int>& a, const Vec<double>& b);
     double InnerProduct(const Vec<double>& a, const Vec<double>& b);    
