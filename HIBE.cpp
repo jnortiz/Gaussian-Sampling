@@ -79,7 +79,6 @@ void HIBE::Setup(int h) {
 //    this->PrintMatrixZZ_pX("Matrix A_prime", this->A_prime);
 //    this->PrintVectorZZ_pX("Vector B", this->B);
 //    cout << "\n/** Polynomial u **/\n" << this->u << endl;    
-//    this->PrintMatrixInt("Master Secret Key (msk)", this->msk);
     
     cout << "[*] Setup status: Pass!" << endl;
     

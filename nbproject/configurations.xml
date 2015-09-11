@@ -40,11 +40,11 @@
       </toolsSet>
       <compileType>
         <ccTool>
-          <incDir>
-            <pElem>$HOME/sw/include</pElem>
-          </incDir>
-          <commandLine>-L$HOME/sw/lib -lntl -lgmp -lm -fopenmp</commandLine>
+          <commandLine>-I$HOME/sw/include</commandLine>
         </ccTool>
+        <linkerTool>
+          <commandLine>-L$HOME/sw/lib -lntl -lgmp -lm</commandLine>
+        </linkerTool>
       </compileType>
       <item path="HIBE.cpp" ex="false" tool="1" flavor2="0">
       </item>

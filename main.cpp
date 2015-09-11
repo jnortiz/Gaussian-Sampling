@@ -186,7 +186,21 @@ int main(void) {
             for(i = 0; i < T.NumRows(); i++)
                 for(j = 0; j < T.NumCols(); j++)
                     T[i][j] = to_RR(S[i][j]);
-                       
+
+/*
+// * Gram-Schmidt example: 
+            T.SetDims(3, 3);
+            T[0][0] = to_RR(1);
+            T[0][1] = to_RR(2);
+            T[0][2] = to_RR(1);
+            T[1][0] = to_RR(1);
+            T[1][1] = to_RR(1);
+            T[1][2] = to_RR(3);
+            T[2][0] = to_RR(2);
+            T[2][1] = to_RR(1);
+            T[2][2] = to_RR(1);
+*/
+            
 #ifdef DEBUG
             cout << "/** Master secret key **/" << endl;                
             cout << hibe->GetMsk() << endl;
@@ -210,11 +224,11 @@ int main(void) {
             cout << "[!] Gram-Schmidt orthogonalization process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
             cout << "[!] Norm of Gram-Schmidt reduced basis: " << normTTilde << endl;            
 
-            for(i = 0; i < TTilde.NumRows(); i++) {
-                cout << TTilde[i];
-                if((i+1) % TTilde.NumCols())
-                    cout << endl;
-            }//end-for
+//            for(i = 0; i < TTilde.NumRows(); i++) {
+//                cout << TTilde[i];
+//                if((i+1) % TTilde.NumCols())
+//                    cout << endl;
+//            }//end-for
             
             return 0;
             

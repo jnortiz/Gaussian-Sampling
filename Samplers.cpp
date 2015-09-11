@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <NTL/ZZX.h>
 
+//#define PARALLEL 1
+
 using namespace NTL;
 using namespace std;
 
@@ -415,19 +417,90 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     
     cout << "\n[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
     cout << "[*] Gram-Schmidt process status: ";
+
+#ifdef PARALLEL
     
     mat_RR mu;
-    vec_RR mult, sum;
-    RR inner1, inner2;
+    vec_RR mult, sum, innerpT_ATilde;
+    RR inner1;
     int cols, rows;
     
     cols = T_A.NumCols();
     rows = T_A.NumRows();
     
-    mu.SetDims(rows, cols);
     T_ATilde.SetDims(rows, cols);
     mult.SetLength(cols);
     sum.SetLength(cols);
+    innerpT_ATilde.SetLength(rows);
+    mu.SetDims(rows, rows);
+    
+    // Diagonal is unary
+    for(int i = 0; i < rows; i++)            
+        mu[i][i] = to_RR(1);
+    
+    vec_RR reduceSum;
+    reduceSum.SetLength(cols);
+    
+    T_ATilde[0] = T_A[0];
+    
+#pragma omp parallel num_threads(2) private(sum, mult)
+{
+
+    vec_RR sum, mult;
+    sum.SetLength(cols);
+    mult.SetLength(cols);
+    
+    for(int i = 1; i < rows; i++) {        
+        
+        NTL::clear(reduceSum);
+        NTL::clear(sum);
+        NTL::clear(mult);
+        
+#pragma omp for schedule(guided) private(inner1)
+        for(int j = 0; j < (i-1); j++) {
+            RR inner1;
+            NTL::InnerProduct(inner1, T_A[i], T_ATilde[j]);
+            div(mu[i][j], inner1, innerpT_ATilde[j]);
+            mul(mult, T_ATilde[j], mu[i][j]);
+            add(sum, sum, mult);
+        }//end-for
+
+#pragma omp single
+{
+        RR inner1;
+        NTL::InnerProduct(inner1, T_A[i], T_ATilde[i-1]);
+        NTL::InnerProduct(innerpT_ATilde[i-1], T_ATilde[i-1], T_ATilde[i-1]);
+        div(mu[i][i-1], inner1, innerpT_ATilde[i-1]);
+        mul(mult, T_ATilde[i-1], mu[i][i-1]);
+        add(sum, sum, mult);
+}
+        
+#pragma omp critical // Each thread adds its partial sum into the reduction variable
+        add(reduceSum, reduceSum, sum);
+#pragma omp barrier
+        
+#pragma omp master // The master thread computes the new value of ~T[i]
+{        
+        sub(T_ATilde[i], T_A[i], reduceSum);        
+}
+    }//end-for
+    
+}//end-parallel-area
+    
+#else
+    
+    mat_RR mu;
+    vec_RR mult, innerpT_ATilde;
+    RR inner1;
+    int cols, rows;
+    
+    cols = T_A.NumCols();
+    rows = T_A.NumRows();
+    
+    mu.SetDims(rows, rows);
+    T_ATilde.SetDims(rows, cols);
+    mult.SetLength(cols);
+    innerpT_ATilde.SetLength(rows);
     
     // Diagonal is unary
     for(int i = 0; i < rows; i++)            
@@ -439,38 +512,53 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
         
         T_ATilde[i] = T_A[i];        
         
-        for(int j = 0; j < i; j++) {
+        for(int j = 0; j < (i-1); j++) {
             NTL::InnerProduct(inner1, T_A[i], T_ATilde[j]);
-            NTL::InnerProduct(inner2, T_ATilde[j], T_ATilde[j]);
-            div(mu[i][j], inner1, inner2);
+            div(mu[i][j], inner1, innerpT_ATilde[j]);
             mul(mult, T_ATilde[j], mu[i][j]);
             sub(T_ATilde[i], T_ATilde[i], mult);
         }//end-for
-                
+
+        NTL::InnerProduct(inner1, T_A[i], T_ATilde[i-1]);
+        NTL::InnerProduct(innerpT_ATilde[i-1], T_ATilde[i-1], T_ATilde[i-1]);
+        div(mu[i][i-1], inner1, innerpT_ATilde[i-1]);
+        mul(mult, T_ATilde[i-1], mu[i][i-1]);
+        sub(T_ATilde[i], T_ATilde[i], mult);
+        
     }//end-for
     
-    if(this->FinalVerificationGSO(T_A, T_ATilde, mu)) {
+#endif
+        
+    if(this->FinalVerificationGSO(T_A, T_ATilde, mu, precision) == 1)
         cout << "Pass!" << endl;
-        RR norm = this->NormOfBasis(T_ATilde);
-        return norm;
-    } else {
-        cout << "Error!" << endl;
-        return to_RR(-1);
-    }
+    else
+        cout << "Error!\nThe distance between resulting matrix and the null matrix is greater than statistical distance.\n" << endl;
+
+    RR norm = this->NormOfBasis(T_ATilde);
+    return norm;
     
 }//end-GramSchmidtProcess() 
 
-int Samplers::FinalVerificationGSO(const mat_RR& T_A, const mat_RR& T_ATilde, const mat_RR& mu) {
+int Samplers::FinalVerificationGSO(const mat_RR& T_A, const mat_RR& T_ATilde, const mat_RR& mu, int precision) {
+    
+    RR::SetPrecision(precision);
     
     mat_RR subt, mult;
     
-    mult.SetDims(T_A.NumRows(), T_A.NumCols());
+    mult.SetDims(mu.NumRows(), T_ATilde.NumCols());
     subt.SetDims(T_A.NumRows(), T_A.NumCols());
+    
+    RR statDistance = power2_RR(-precision);
     
     NTL::mul(mult, mu, T_ATilde);
     NTL::sub(subt, mult, T_A);
     
-    return NTL::IsZero(subt);
+    for(int i = 0; i < T_A.NumRows(); i++)
+        for(int j = 0; j < T_A.NumCols(); j++)
+            if(abs(subt[i][j]) > statDistance)
+                return 0;
+    
+    return 1;
     
 }//end-FinalVerificationGSO()
 
