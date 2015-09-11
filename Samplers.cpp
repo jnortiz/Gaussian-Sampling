@@ -525,6 +525,8 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
         mul(mult, T_ATilde[i-1], mu[i][i-1]);
         sub(T_ATilde[i], T_ATilde[i], mult);
         
+        cout << "Iteration #" << i << ".\n";
+        
     }//end-for
     
 #endif
