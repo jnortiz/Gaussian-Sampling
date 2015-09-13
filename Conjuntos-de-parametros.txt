@@ -1,0 +1,40 @@
+    /* 128-bit security level */
+/*
+    // 548,660,352
+    h = 10;
+    k = 7; // n = 2^k is the degree of polynomials in R and R_0
+    q = 2083; //q must be prime and congruent to 3 mod 8
+    m1 = 13;
+    m2 = 170; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+ */
+ 
+    // 24,920,064
+/*    h = 10;
+    k = 5; // n = 2^k is the degree of polynomials in R and R_0
+    q = 2027; //q must be prime and congruent to 3 mod 8
+    m1 = 12;
+    m2 = 144; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))    
+
+    /* Toy parameter sets */    
+/*    
+    h = 10;
+    k = 2; // n = 2^k is the degree of polynomials in R and R_0
+    q = 11; //q must be prime and congruent to 3 mod 8
+    m1 = 5;
+    m2 = 30; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+/**/
+/*    
+    h = 10;
+    k = 4; // n = 2^k is the degree of polynomials in R and R_0
+    q = 227; //q must be prime and congruent to 3 mod 8
+    m1 = 9;
+    m2 = 81; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+*/
+/*    
+    h = 10;
+    k = 5; // n = 2^k is the degree of polynomials in R and R_0
+    q = 347; //q must be prime and congruent to 3 mod 8
+    m1 = 11;
+    m2 = 112; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+*/
+ 

@@ -68,8 +68,6 @@ private:
     RR NewMarsagliaTailMethod(RR r);
         
     /* Algorithms for Gram-Schmidt orthogonalization */
-    double GramSchmidtProcess(Vec< Vec<double> >& T_ATilde, const Vec< Vec<int> >& T_A);
-    int FinalVerificationGSO(const mat_RR& T_A, const mat_RR& T_ATilde, const mat_RR& mu, int precision);
     /* Algorithm for generating the Gram-Schmidt reduced basis for block isometric basis */    
     RR BlockGSO(mat_RR& BTilde, const Vec<ZZX>& B, int n, int precision);
     void FasterIsometricGSO(mat_RR& BTilde, const mat_RR& B);
@@ -99,7 +97,6 @@ private:
     RR Norm(const ZZX& b, int n);
 
     void PrintMatrix(const string& name, const Vec< Vec<int> >& matrix);
-    void CopyIntToDoubleVec(Vec<double>& B, const Vec<int>& A);
     
 };
 

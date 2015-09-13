@@ -1,0 +1,19 @@
+h = 10;
+k = 4; // n = 2^k is the degree of polynomials in R and R_0
+q = 2027; //q must be prime and congruent to 3 mod 8
+m1 = 12;
+m2 = 144; //m2 >= lambda*m1, such as lambda is the security parameter and lambda = ceil(1 + lg(q))
+
+[*] IdealTrapGen status: Pass!
+[*] Setup status: Pass!
+[!] Setup running time: 0.177359 s.
+
+[!] Norm of short basis T: 11548.44751
+[*] Gram-Schmidt process status: Pass!
+[!] Gram-Schmidt orthogonalization process running time: 1551.49 s.
+[!] Norm of Gram-Schmidt reduced basis: 2477.985444
+
+[*] Gaussian Sampler status: negative length in vector::SetLength
+
+RUN FINISHED; Aborted; core dumped; real time: 31m 23s; user: 1s; system: 31m 11s
+

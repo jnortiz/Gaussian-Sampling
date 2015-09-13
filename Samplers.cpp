@@ -17,14 +17,11 @@
 #include <stdio.h>
 #include <NTL/ZZX.h>
 
-//#define PARALLEL 1
-
 using namespace NTL;
 using namespace std;
 
 Samplers::Samplers(int q, const ZZ_pX& f) {
-
-/*     
+     
     int randint;
     int bytes_read;
     int fd = open("/dev/urandom", O_RDONLY);
@@ -38,8 +35,7 @@ Samplers::Samplers(int q, const ZZ_pX& f) {
     
     close(fd);
           
-    NTL::SetSeed(to_ZZ(randint));    
-*/
+    NTL::SetSeed(to_ZZ(randint));
     
     ZZ_p::init(conv<ZZ>(q)); // Coefficients modulo
     this->f = f;
@@ -47,7 +43,12 @@ Samplers::Samplers(int q, const ZZ_pX& f) {
     
 }//end-Samplers()
 
-Samplers::~Samplers() {};
+Samplers::~Samplers() {
+    this->P.kill();
+    this->begin.kill();
+    this->X.kill();
+    this->f.kill();
+};
 
 RR Samplers::Probability(RR x, RR sigma, RR c) {
     RR S = sigma*sqrt(2*ComputePi_RR());
@@ -417,208 +418,65 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     
     cout << "\n[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
     cout << "[*] Gram-Schmidt process status: ";
-
-#ifdef PARALLEL
     
     mat_RR mu;
-    vec_RR mult, sum, innerpT_ATilde;
+    vec_RR innerpT_ATilde, mult, sum;
     RR inner1;
     int cols, rows;
     
     cols = T_A.NumCols();
     rows = T_A.NumRows();
     
+    mu.SetDims(rows, rows);
     T_ATilde.SetDims(rows, cols);
     mult.SetLength(cols);
     sum.SetLength(cols);
     innerpT_ATilde.SetLength(rows);
-    mu.SetDims(rows, rows);
     
-    // Diagonal is unary
     for(int i = 0; i < rows; i++)            
         mu[i][i] = to_RR(1);
     
-    vec_RR reduceSum;
-    reduceSum.SetLength(cols);
-    
     T_ATilde[0] = T_A[0];
-    
-#pragma omp parallel num_threads(2) private(sum, mult)
-{
 
-    vec_RR sum, mult;
-    sum.SetLength(cols);
-    mult.SetLength(cols);
-    
-    for(int i = 1; i < rows; i++) {        
+    for(int i = 1; i < rows; i++) {
         
-        NTL::clear(reduceSum);
-        NTL::clear(sum);
-        NTL::clear(mult);
+        clear(sum);
         
-#pragma omp for schedule(guided) private(inner1)
         for(int j = 0; j < (i-1); j++) {
-            RR inner1;
             NTL::InnerProduct(inner1, T_A[i], T_ATilde[j]);
             div(mu[i][j], inner1, innerpT_ATilde[j]);
             mul(mult, T_ATilde[j], mu[i][j]);
             add(sum, sum, mult);
         }//end-for
 
-#pragma omp single
-{
-        RR inner1;
         NTL::InnerProduct(inner1, T_A[i], T_ATilde[i-1]);
         NTL::InnerProduct(innerpT_ATilde[i-1], T_ATilde[i-1], T_ATilde[i-1]);
         div(mu[i][i-1], inner1, innerpT_ATilde[i-1]);
         mul(mult, T_ATilde[i-1], mu[i][i-1]);
         add(sum, sum, mult);
-}
         
-#pragma omp critical // Each thread adds its partial sum into the reduction variable
-        add(reduceSum, reduceSum, sum);
-#pragma omp barrier
+        sub(T_ATilde[i], T_A[i], sum);
         
-#pragma omp master // The master thread computes the new value of ~T[i]
-{        
-        sub(T_ATilde[i], T_A[i], reduceSum);        
-}
-    }//end-for
-    
-}//end-parallel-area
-    
-#else
-    
-    mat_RR mu;
-    vec_RR mult, innerpT_ATilde;
-    RR inner1;
-    int cols, rows;
-    
-    cols = T_A.NumCols();
-    rows = T_A.NumRows();
-    
-    mu.SetDims(rows, rows);
-    T_ATilde.SetDims(rows, cols);
-    mult.SetLength(cols);
-    innerpT_ATilde.SetLength(rows);
-    
-    // Diagonal is unary
-    for(int i = 0; i < rows; i++)            
-        mu[i][i] = to_RR(1);
-    
-    T_ATilde[0] = T_A[0];
-    
-    for(int i = 1; i < rows; i++) {
-        
-        T_ATilde[i] = T_A[i];        
-        
-        for(int j = 0; j < (i-1); j++) {
-            NTL::InnerProduct(inner1, T_A[i], T_ATilde[j]);
-            div(mu[i][j], inner1, innerpT_ATilde[j]);
-            mul(mult, T_ATilde[j], mu[i][j]);
-            sub(T_ATilde[i], T_ATilde[i], mult);
-        }//end-for
-
-        NTL::InnerProduct(inner1, T_A[i], T_ATilde[i-1]);
-        NTL::InnerProduct(innerpT_ATilde[i-1], T_ATilde[i-1], T_ATilde[i-1]);
-        div(mu[i][i-1], inner1, innerpT_ATilde[i-1]);
-        mul(mult, T_ATilde[i-1], mu[i][i-1]);
-        sub(T_ATilde[i], T_ATilde[i], mult);
-        
-        cout << "Iteration #" << i << ".\n";
+        cout << "Iteration #" << i << " of " << (rows-1) << "." << endl;
         
     }//end-for
     
-#endif
-        
-    if(this->FinalVerificationGSO(T_A, T_ATilde, mu, precision) == 1)
-        cout << "Pass!" << endl;
-    else
-        cout << "Error!\nThe distance between resulting matrix and the null matrix is greater than statistical distance.\n" << endl;
-
+    mu.kill();
+    innerpT_ATilde.kill();
+    mult.kill();
+    sum.kill();
+    
+    cout << "Pass!" << endl;
     RR norm = this->NormOfBasis(T_ATilde);
     return norm;
     
 }//end-GramSchmidtProcess() 
 
-int Samplers::FinalVerificationGSO(const mat_RR& T_A, const mat_RR& T_ATilde, const mat_RR& mu, int precision) {
-    
-    RR::SetPrecision(precision);
-    
-    mat_RR subt, mult;
-    
-    mult.SetDims(mu.NumRows(), T_ATilde.NumCols());
-    subt.SetDims(T_A.NumRows(), T_A.NumCols());
-    
-    RR statDistance = power2_RR(-precision);
-    
-    NTL::mul(mult, mu, T_ATilde);
-    NTL::sub(subt, mult, T_A);
-    
-    for(int i = 0; i < T_A.NumRows(); i++)
-        for(int j = 0; j < T_A.NumCols(); j++)
-            if(abs(subt[i][j]) > statDistance)
-                return 0;
-    
-    return 1;
-    
-}//end-FinalVerificationGSO()
-
-double Samplers::GramSchmidtProcess(Vec< Vec<double> >& T_ATilde, const Vec< Vec<int> >& T_A) {
-    
-    /*
-     * Input: a square matrix T_A (nm x nm)
-     */
-    
-    cout << "\n[!] Norm of the short basis: " << this->NormOfBasis(T_A) << endl;
-    
-    cout << "[*] Gram-Schmidt process status: ";
-    
-    int i, j, k;
-    int length;
-    double mu, norm;
-    
-    length = T_A.length();
-    
-    T_ATilde.SetLength(length);
-    for(i = 0; i < length; i++)
-        T_ATilde[i].SetLength(length);
-                
-    for(i = 0; i < length; i++) { // For each vector
-        
-        this->CopyIntToDoubleVec(T_ATilde[i], T_A[i]);
-        
-        for(j = 0; j < i; j++) {
-            
-            mu = this->InnerProduct(T_A[i], T_ATilde[j])/this->InnerProduct(T_ATilde[j], T_ATilde[j]);
-            
-            for(k = 0; k < length; k++)
-                T_ATilde[i][k] = T_ATilde[i][k] - mu*T_ATilde[j][k];            
-            
-        }//end-for
-    }//end-for
-    
-    norm = this->NormOfBasis(T_ATilde);
-    
-    cout << "Pass!" << endl;
-    
-    return norm;
-    
-}//end-GramSchmidtProcess() 
-
-void Samplers::CopyIntToDoubleVec(Vec<double>& B, const Vec<int>& A) {
-    
-    B.SetLength(A.length());
-    
-    for(int i = 0; i < B.length(); i++)
-        B[i] = (double)A[i];
-    
-}//end-CopyIntToDoubleVec()
-
 /* Computes the decomposition of A into B*B^t and returns the lower-triangular matrix B */
 void Samplers::CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<double> >& A, int n) {
     
-    int i, j;
+    int i, j, k;
+    double s;
     
     B.SetLength(n);
     for(i = 0; i < n; i++) {
@@ -626,32 +484,30 @@ void Samplers::CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<doubl
         for(j = 0; j < n; j++) {
             B[i][j] = 0.0;
             cout << A[i][j] << " ";
-        }
+        }//end-for
         cout << endl;
     }//end-for
-    
-    int k;
-    double s;
-    
-    for(i = 0; i < n; i++) { // Every line
-        for(j = 0; j <= i; j++) { // Only columns before diagonal
+        
+    for(i = 0; i < n; i++) {
+        for(j = 0; j <= i; j++) {
             
             s = 0.0;
             
-            for(k = 0; k < j; k++) // Sum
-                s += B[i][k]*B[j][k];
-            
+            for(k = 0; k < j; k++)
+                s += B[i][k]*B[j][k];            
             cout << "s: " << s << endl;
+            
             if(i == j) {
                 cout << "Caso i == j: " << sqrt(A[i][i] - s) << endl;
                 B[i][j] = sqrt(A[i][i] - s);                    
-            }
-            else
+            } else
                 B[i][j] = 1.0/B[j][j]*(A[i][j] - s);
+            
             cout << B[i][j] << " ";
+            
         }//end-for
         cout << endl;
-    }
+    }//end-for
     
 }//end-CholeskyDecomposition()
 
@@ -949,11 +805,7 @@ void Samplers::PrepareToSampleCGS(const vec_RR& B1, const mat_RR& BTilde) {
         sub(v[i+1], v[i], mult);
     }//end-for    
     
-}
-
-vec_RR Samplers::CompactGaussianSampler(const Vec< Vec<int> >& B, RR sigma, const vec_RR center, const vec_RR& BTilden, const vec_RR& Vn, const vec_RR& H, const vec_RR& I) {
-    
-}
+}//end-PrepareToSampleCGS()
 
 vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center) {
 
@@ -964,7 +816,8 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
     vec_RR C, sample;
     int Z;
     
-    RR d, innerp, innerp1, sigma_i;
+    RR d, innerp, innerp1;
+//    RR sigma_i;
     int cols, i, j, rows;
     
     cols = BTilde.NumCols();
@@ -986,14 +839,11 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
         div(d, innerp1, innerp);
         
         // And the new standard deviation
-        div(sigma_i, sigma, sqrt(innerp));
+//        div(sigma_i, sigma, sqrt(innerp));
         
-        cout << "sigma_i: " << sigma_i << endl;
-        cout << "t*sigma: " << to_RR(tailcut)*sigma_i << endl;
+        this->BuildProbabilityMatrix(precision, tailcut, sigma, d);             
         
-        this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d);             
-        
-        Z = this->KnuthYao(tailcut, sigma_i, d);
+        Z = this->KnuthYao(tailcut, sigma, d);
         
         for(j = 0; j < B.NumCols(); j++)
             C[j] = C[j] - to_RR(B[i][j]*Z);
