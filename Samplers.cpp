@@ -51,6 +51,7 @@ Samplers::~Samplers() {
 };
 
 RR Samplers::Probability(RR x, RR sigma, RR c) {
+    
     RR S = sigma*sqrt(2*ComputePi_RR());
     RR overS = 1/S;
     
@@ -64,15 +65,18 @@ RR Samplers::Probability(RR x, RR sigma, RR c) {
 /* It selects between two given values depending on a bit. 
  * If the bit is zero, the output becomes "a" */
 int Select(int a, int b, unsigned bit) {
+    
     unsigned mask;
     int output;
+    
     mask = -bit;
     output = mask & (a ^ b);
     output = output ^ a;
+    
     return output;
+    
 }//end-Select()
 
-/* Knuth-Yao algorithm to obtain a sample from the discrete Gaussian */
 int Samplers::KnuthYao(int tailcut, RR sigma, RR c) {
 
     int bound, center, col, d, invalidSample, pNumRows, pNumCols, S, signal;
@@ -81,28 +85,27 @@ int Samplers::KnuthYao(int tailcut, RR sigma, RR c) {
     
     bound = tailcut*to_int(sigma);
     center = to_int(c);
-    d = 0; //Distance
+    d = 0;
     hit = 0;
-    signal = 1 - 2*RandomBits_long(1); // Sample a random signal s    
+    signal = 1 - 2*RandomBits_long(1);
     invalidSample = bound+1;
-    pNumRows = this->P.length(); // Precision
+    pNumRows = this->P.length();
     pNumCols = this->P[0].length();    
     
     Vec<int> randomBits;
     randomBits.SetLength(pNumRows);
     
     int i, index, j, length;
-    length = sizeof(unsigned long)*8; // 64 bits 
+    length = sizeof(unsigned long)*8; 
     
     index = 0;
     for(i = 0; i < (pNumRows/length+1); i++) {
-        r = RandomWord(); // It returns a word filled with pseudo-random bits
+        r = RandomWord();
         for(j = 0; j < length, index < pNumRows; j++, r >>= 1)
-            randomBits[index++] = (r & 1); // Getting the least significant bit
+            randomBits[index++] = (r & 1);
     }//end-for
     
-    S = 0;
-    
+    S = 0;    
     for(int row = 0; row < pNumRows; row++) {
         
         d = 2*d + randomBits[row]; // Distance calculus
@@ -198,26 +201,7 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
                 
 }//end-BuildProbabilityMatrix()
 
-/* Method for computing the binary expansion of a given probability in [0, 1] */
-void Samplers::BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precision, int index) {
-    
-    RR pow;
-    int i, j;
-    i = -1;
-    j = 0;
-    
-    while(probability > 0 && j < precision) {
-        pow = power2_RR(i--); // 2^{i}
-        if(pow <= probability) {
-            auxP[j][index] = 1;
-            probability -= pow;
-        } else
-            auxP[j][index] = 0;
-        j++;
-    }//end-while
-            
-}//end-BinaryExpansion()
-
+// Ziggurat method for sampling from a continuous Gaussian distribution
 RR Samplers::Ziggurat(int m, RR sigma, int precision, RR tail) {
     
     cout << "[*] Ziggurat status: ";
@@ -262,7 +246,7 @@ RR Samplers::Ziggurat(int m, RR sigma, int precision, RR tail) {
     
 }//end-Ziggurat()
 
-/* DZCreatePartition defines the x and y axes of rectangles in the Gaussian distribution */
+/* DZCreatePartition defines the x- and y-axes of the rectangles in the Gaussian distribution */
 void Samplers::ZCreatePartition(int m, RR sigma, int n, RR tail, RR& v) {
     
     cout << "\n[*] DZCreatePartition status: ";
@@ -412,6 +396,7 @@ RR Samplers::NewMarsagliaTailMethod(RR r) {
     
 }//end-NewMarsagliaTailMethod()
 
+// Usual algorithm for Gram-Schmidt orthogonalization
 RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precision) {
     
     RR::SetPrecision(precision);
@@ -457,8 +442,6 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
         
         sub(T_ATilde[i], T_A[i], sum);
         
-        cout << "Iteration #" << i << " of " << (rows-1) << "." << endl;
-        
     }//end-for
     
     mu.kill();
@@ -472,45 +455,7 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     
 }//end-GramSchmidtProcess() 
 
-/* Computes the decomposition of A into B*B^t and returns the lower-triangular matrix B */
-void Samplers::CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<double> >& A, int n) {
-    
-    int i, j, k;
-    double s;
-    
-    B.SetLength(n);
-    for(i = 0; i < n; i++) {
-        B[i].SetLength(n);
-        for(j = 0; j < n; j++) {
-            B[i][j] = 0.0;
-            cout << A[i][j] << " ";
-        }//end-for
-        cout << endl;
-    }//end-for
-        
-    for(i = 0; i < n; i++) {
-        for(j = 0; j <= i; j++) {
-            
-            s = 0.0;
-            
-            for(k = 0; k < j; k++)
-                s += B[i][k]*B[j][k];            
-            cout << "s: " << s << endl;
-            
-            if(i == j) {
-                cout << "Caso i == j: " << sqrt(A[i][i] - s) << endl;
-                B[i][j] = sqrt(A[i][i] - s);                    
-            } else
-                B[i][j] = 1.0/B[j][j]*(A[i][j] - s);
-            
-            cout << B[i][j] << " ";
-            
-        }//end-for
-        cout << endl;
-    }//end-for
-    
-}//end-CholeskyDecomposition()
-
+// Gram-Schmidt orthogonalization procedure for block isometric basis
 RR Samplers::BlockGSO(mat_RR& BTilde, const Vec<ZZX>& B, int n, int precision) {
     
     // Precision of floating point operations
@@ -574,6 +519,7 @@ RR Samplers::BlockGSO(mat_RR& BTilde, const Vec<ZZX>& B, int n, int precision) {
     
 }//end-BlockGSO()
 
+// Gram-Schmidt orthogonalization procedure for isometric basis
 void Samplers::FasterIsometricGSO(mat_RR& BTilde, const mat_RR& B) {
     
     /* This implementation follows the Algorithm 3 
@@ -617,39 +563,125 @@ void Samplers::FasterIsometricGSO(mat_RR& BTilde, const mat_RR& B) {
     
 }//end-FasterIsometricGSO()
 
-/* Giving a polynomial g, out contains (b*x)%f(x) */
-ZZX Samplers::Isometry(ZZX& b, int n) {
-    
-    ZZX out;
-    out.SetLength(n);
-    
-    if(IsZero(b))
-        out = to_ZZX(0);        
-    else {
-        out[0] = -b[n-1];    
-        for(int i = 1; i < n; i++)
-            out[i] = b[i-1];
-    }//end-else
-    
-    return out;
-    
-}//end-Isometry()
+vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center) {
 
-vec_RR Samplers::Isometry(const vec_RR& b) {
+    cout << "\n[*] Gaussian Sampler status: ";
     
-    int n = b.length();    
-    vec_RR out;    
-    out.SetLength(n);
+    RR::SetPrecision(precision);    
+
+    vec_RR C, sample;
+    int Z;
     
+    RR d, innerp, innerp1;
+    RR sigma_i;
+    int cols, i, j, rows;
+    
+    cols = BTilde.NumCols();
+    rows = BTilde.NumRows();
+    
+    C.SetLength(cols);
+    sample.SetLength(cols);
+                
+    C = center; // Center of the lattice        
+    
+    /* The inner product and norm operations are taken 
+     * in the inner product space H */
+    for(i = rows-1; i >= 0; i--) {
         
-    out[0] = -b[n-1];    
-    for(int i = 1; i < n; i++)
-        out[i] = b[i-1];
+        NTL::InnerProduct(innerp, BTilde[i], BTilde[i]);
+        NTL::InnerProduct(innerp1, C, BTilde[i]);
+        
+        // The new center for the discrete Gaussian
+        div(d, innerp1, innerp);
+        
+        // And the new standard deviation
+        div(sigma_i, sigma, sqrt(innerp));
+        
+        this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d);             
+        
+        Z = this->KnuthYao(tailcut, sigma_i, d);
+        
+        for(j = 0; j < B.NumCols(); j++)
+            C[j] = C[j] - to_RR(B[i][j]*Z);
+        
+    }//end-for
     
-    return out;
+    sub(sample, center, C);    
+    cout << "Pass!" << endl;    
+    return sample;
     
-}//end-Isometry()
+}//end-GaussianSamplerFromLattice()
 
+/* Computes the decomposition of A, a square matrix, into B*B^t and returns the lower-triangular matrix B */
+void Samplers::CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<double> >& A, int n) {
+    
+    /* Algorithm required in Peikert sampler */
+    
+    int i, j, k;
+    double s;
+    
+    B.SetLength(n);
+    
+    for(i = 0; i < n; i++) {
+        B[i].SetLength(n);
+        for(j = 0; j < n; j++)
+            B[i][j] = 0.0;
+    }//end-for
+        
+    for(i = 0; i < n; i++) {
+        for(j = 0; j <= i; j++) {
+            
+            s = 0.0;            
+            for(k = 0; k < j; k++)
+                s += B[i][k]*B[j][k];            
+            
+            if(i == j)
+                B[i][j] = sqrt(A[i][i] - s);                    
+            else
+                B[i][j] = 1.0/B[j][j]*(A[i][j] - s);
+            
+        }//end-for
+    }//end-for
+    
+}//end-CholeskyDecomposition()
+
+void Samplers::PrepareToSampleCGS(const vec_RR& B1, const mat_RR& BTilde) {
+    
+    int cols, rows;
+    
+    cols = BTilde.NumCols();
+    rows = BTilde.NumRows();
+    
+    mat_RR v;
+    vec_RR C, D, H, I, mult;
+    RR di;
+    int i;
+    
+    v.SetDims(rows, cols);
+    C.SetLength(rows-1); // From 1 to (n-1)
+    D.SetLength(rows);
+    H.SetLength(rows-1); // From 1 to (n-1)
+    I.SetLength(rows-1); // From 1 to (n-1)
+    
+    
+    NTL::InnerProduct(D[0], BTilde[0], BTilde[0]);
+    for(i = 1; i < rows; i++) {
+        NTL::InnerProduct(D[i], BTilde[i], BTilde[i]);
+        div(H[i-1], D[i-1], D[i]);        
+    }//end-for
+    
+    v[0] = B1;
+    for(i = 0; i < (rows-1); i++) {
+        NTL::InnerProduct(C[i], v[i], this->Isometry(BTilde[i]));
+        div(I[i], C[i], D[i+1]);
+        div(di, C[i], D[i]);
+        mul(mult, this->Isometry(BTilde[i]), di);
+        sub(v[i+1], v[i], mult);
+    }//end-for    
+    
+}//end-PrepareToSampleCGS()
+
+/* Expansion of matrix T_A, which was generated by IdealTrapGen, into the integer basis S */
 void Samplers::RotBasis(mat_ZZ& T, const Vec< Vec<ZZX> >& S, int n) {
     
     /*
@@ -714,27 +746,23 @@ void Samplers::rot(Vec<ZZX>& out, const ZZX& b, int n) {
    
 }//end-rot()
 
-void Samplers::RotBasis(Vec<ZZX>& T, const Vec< Vec<ZZX> >& S, int n) {
+/* Giving a polynomial g, out contains (b*x)%f(x) */
+ZZX Samplers::Isometry(ZZX& b, int n) {
     
-    Vec<ZZX> outrot;
-    int i, j, k;
-    int m = S.length();
+    ZZX out;
+    out.SetLength(n);
     
-    T.SetLength(m*m*n);
-    for(i = 0; i < (m*m*n); i++)
-        T[i].SetLength(n);
+    if(IsZero(b))
+        out = to_ZZX(0);        
+    else {
+        out[0] = -b[n-1];    
+        for(int i = 1; i < n; i++)
+            out[i] = b[i-1];
+    }//end-else
     
-    int index = 0;
-    for(i = 0; i < m; i++) {
-        for(j = 0; j < m; j++) {
-            this->rot(outrot, S[i][j], n);
-            for(k = 0; k < n; k++)
-                T[index+k] = outrot[k];
-            index += n;
-        }//end-for
-    }//end-for    
-        
-}//end-RotBasis()
+    return out;
+    
+}//end-Isometry()
 
 void Samplers::rot(mat_RR& out, const vec_RR& b, int n) {
         
@@ -753,6 +781,21 @@ void Samplers::rot(mat_RR& out, const vec_RR& b, int n) {
     
 }//end-rot()
 
+vec_RR Samplers::Isometry(const vec_RR& b) {
+    
+    int n = b.length();    
+    vec_RR out;    
+    out.SetLength(n);
+    
+        
+    out[0] = -b[n-1];    
+    for(int i = 1; i < n; i++)
+        out[i] = b[i-1];
+    
+    return out;
+    
+}//end-Isometry()
+
 void Samplers::SetCenter(vec_RR& c, const mat_ZZ& S) {
     
     int cols, rows;    
@@ -770,202 +813,6 @@ void Samplers::SetCenter(vec_RR& c, const mat_ZZ& S) {
     }//end-for
     
 }//end-SetCenter()
-
-void Samplers::PrepareToSampleCGS(const vec_RR& B1, const mat_RR& BTilde) {
-    
-    int cols, rows;
-    
-    cols = BTilde.NumCols();
-    rows = BTilde.NumRows();
-    
-    mat_RR v;
-    vec_RR C, D, H, I, mult;
-    RR di;
-    int i;
-    
-    v.SetDims(rows, cols);
-    C.SetLength(rows-1); // From 1 to (n-1)
-    D.SetLength(rows);
-    H.SetLength(rows-1); // From 1 to (n-1)
-    I.SetLength(rows-1); // From 1 to (n-1)
-    
-    
-    NTL::InnerProduct(D[0], BTilde[0], BTilde[0]);
-    for(i = 1; i < rows; i++) {
-        NTL::InnerProduct(D[i], BTilde[i], BTilde[i]);
-        div(H[i-1], D[i-1], D[i]);        
-    }//end-for
-    
-    v[0] = B1;
-    for(i = 0; i < (rows-1); i++) {
-        NTL::InnerProduct(C[i], v[i], this->Isometry(BTilde[i]));
-        div(I[i], C[i], D[i+1]);
-        div(di, C[i], D[i]);
-        mul(mult, this->Isometry(BTilde[i]), di);
-        sub(v[i+1], v[i], mult);
-    }//end-for    
-    
-}//end-PrepareToSampleCGS()
-
-vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center) {
-
-    cout << "\n[*] Gaussian Sampler status: ";
-    
-    RR::SetPrecision(precision);    
-
-    vec_RR C, sample;
-    int Z;
-    
-    RR d, innerp, innerp1;
-//    RR sigma_i;
-    int cols, i, j, rows;
-    
-    cols = BTilde.NumCols();
-    rows = BTilde.NumRows();
-    
-    C.SetLength(cols);
-    sample.SetLength(cols);
-                
-    C = center; // Center of the lattice        
-    
-    /* The inner product and norm operations are taken 
-     * in the inner product space H */
-    for(i = rows-1; i >= 0; i--) {
-        
-        NTL::InnerProduct(innerp, BTilde[i], BTilde[i]);
-        NTL::InnerProduct(innerp1, C, BTilde[i]);
-        
-        // The new center for the discrete Gaussian
-        div(d, innerp1, innerp);
-        
-        // And the new standard deviation
-//        div(sigma_i, sigma, sqrt(innerp));
-        
-        this->BuildProbabilityMatrix(precision, tailcut, sigma, d);             
-        
-        Z = this->KnuthYao(tailcut, sigma, d);
-        
-        for(j = 0; j < B.NumCols(); j++)
-            C[j] = C[j] - to_RR(B[i][j]*Z);
-        
-    }//end-for
-    
-    sub(sample, center, C);
-    
-    cout << "Pass!" << endl;
-    
-    return sample;
-    
-}//end-GaussianSamplerFromLattice()
-
-/* Generic method for Gaussian Sampling over lattices */
-ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n) {
-
-    // Precision of floating point operations
-    RR::SetPrecision(precision);    
-
-    ZZX C, mult, sample;
-    int Z;
-    
-    vec_RR auxC;
-    RR d, innerp1, innerp2, norm, sigma_i;
-    int i, j, mn;
-    
-    mn = B.length(); // mn = (m1 + m2) * n
-    
-    auxC.SetLength(n);
-    C.SetLength(n);
-    mult.SetLength(n);
-    sample.SetLength(n);
-                
-    C = center; // Center of the lattice        
-    
-    /* The inner product and norm operations are taken 
-     * in the inner product space H */
-    for(i = mn-1; i >= 0; i--) {
-        
-        norm = this->Norm(BTilde[i], n);
-        
-        for(j = 0; j < n; j++)
-            auxC[j] = to_RR(C[j]);
-        
-        NTL::InnerProduct(innerp1, auxC, BTilde[i]);
-        NTL::InnerProduct(innerp2, BTilde[i], BTilde[i]);
-        
-        // The new center for the discrete Gaussian
-        div(d, innerp1, innerp2);        
-        
-        // And the new standard deviation
-        div(sigma_i, sigma, norm);
-        
-        this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d);             
-        
-        Z = this->KnuthYao(tailcut, sigma_i, d);
-
-        mul(mult, B[i], Z);       
-        
-        sub(C, C, mult);
-        
-    }//end-for
-    
-    sub(sample, center, C);
-    
-    return sample;
-    
-}//end-GaussianSamplerFromLattice()
-
-RR Samplers::Norm(const vec_RR& b, int n) {
-    
-    RR norm, mult;
-    norm = to_RR(0);
-
-    for(int i = 0; i < n; i++) {
-        mul(mult, b[i], b[i]);
-        add(norm, norm, mult);
-    }//end-for
-    
-    return SqrRoot(norm);
-        
-}//end-Norm()
-
-double Samplers::InnerProduct(const Vec<int>& a, const Vec<int>& b) {
-    
-    double innerp, mult;
-    innerp = 0.0;
-
-    for(int i = 0; i < a.length(); i++) {
-        mult = ((double)a[i])*((double)b[i]);
-        innerp += mult;
-    }//end-for
-    
-    return innerp;
-    
-}//end-InnerProduct()
-
-double Samplers::InnerProduct(const Vec<double>& a, const Vec<double>& b) {
-    
-    double innerp = 0.0;
-
-    for(int i = 0; i < a.length(); i++)
-        innerp += a[i]*b[i];
-    
-    return innerp;
-    
-}//end-InnerProduct()
-
-double Samplers::InnerProduct(const Vec<int>& a, const Vec<double>& b) {
-    
-    double innerp, mult;
-    innerp = 0.0;
-
-    for(int i = 0; i < a.length(); i++) {
-        mult = ((double)a[i])*b[i];
-        innerp += mult;
-    }//end-for
-    
-    return innerp;
-    
-}//end-InnerProduct()
 
 RR Samplers::NormOfBasis(const mat_RR& B) {
     
@@ -997,34 +844,6 @@ RR Samplers::NormOfBasis(const Vec<ZZX>& B, int m, int n) {
     }//end-for
     
     return normB;
-    
-}//end-NormOfBasis()
-
-double Samplers::NormOfBasis(const Vec< Vec<double> >& T_ATilde) {
-    
-    double norm, normT_ATilde = 0.0;
-    
-    for(int i = 0; i < T_ATilde.length(); i++) {
-        norm = sqrt(this->InnerProduct(T_ATilde[i], T_ATilde[i]));
-        if(norm > normT_ATilde)
-            normT_ATilde = norm;
-    }//end-for
-    
-    return normT_ATilde;
-    
-}//end-NormOfBasis()
-
-double Samplers::NormOfBasis(const Vec< Vec<int> >& T_A) {
-    
-    double norm, normT_A = 0.0;
-    
-    for(int i = 0; i < T_A.length(); i++) {
-        norm = sqrt(this->InnerProduct(T_A[i], T_A[i]));
-        if(norm > normT_A)
-            normT_A = norm;
-    }//end-for
-    
-    return normT_A;
     
 }//end-NormOfBasis()
 

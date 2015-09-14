@@ -25,12 +25,14 @@
       <runprofile version="9">
         <runcommandpicklist>
           <runcommandpicklistitem>"${OUTPUT_PATH}" > output.txt</runcommandpicklistitem>
-          <runcommandpicklistitem>"${OUTPUT_PATH}"</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" > output-interm1.txt</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" > output-interm2.txt</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" > output-interm.txt</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" > output-smaller.txt</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" > output-smaller2.txt</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}"</runcommandpicklistitem>
         </runcommandpicklist>
-        <runcommand>"${OUTPUT_PATH}" > output-interm.txt</runcommand>
+        <runcommand>"${OUTPUT_PATH}"</runcommand>
         <rundir></rundir>
         <buildfirst>true</buildfirst>
         <terminal-type>0</terminal-type>
