@@ -19,19 +19,11 @@ using namespace NTL;
 
 class HIBE {
 public:
+    
+    void Setup(int h);
     HIBE(double q, int m1, int m2, int k);
     virtual ~HIBE();    
     
-    /* HIBE algorithms */
-    void Setup(int h);
-
-// Ongoing:    
-//    void KeyDerive();
-// TODO:    
-//    void Encrypt();
-//    void Decrypt();
-        
-    /* Getters of Setup algorithm */
     long GetM() { return m; }    
     long GetN() { return n; }
     ZZ_pX GetF() const { return f; }
@@ -89,12 +81,6 @@ private:
     void Concat(Vec<ZZ_pX>& A, const Vec<ZZ_pX>& A1, const Vec<ZZ_pX>& A2);
     int FinalVerification(const Vec<ZZ_pX>& A, const Vec< Vec<ZZX> >& S);
   
-    /* Auxiliary functions of Ziggurat algorithm */
-    void DZCreatePartition(RR m, RR sigma, RR n);
-    RR DZRecursion(RR m, RR c, RR sigma);
-    RR Rho(RR sigma, RR x);
-    ZZ sLine(ZZ x0, ZZ x1, ZZ y0, ZZ y1, ZZ x, long int i);
-    
     /* Auxiliary functions */
     void PrintMatrixInt(const string& name, const Vec< Vec<int> >& M);
     void PrintVectorZZX(const string& name, const Vec<ZZX>& M);
