@@ -55,6 +55,15 @@ int main(void) {
             m2 = 101;                 
             break;
         }
+        case 3: {
+            /* Tiny parameter set */
+            h = 10;
+            k = 2;
+            q = 11;
+            m1 = 5;
+            m2 = 30;
+            break;
+        }
         default: {
             cout << "Please, select a parameter set." << endl;
             return -1;
@@ -112,7 +121,8 @@ int main(void) {
         cout << "[!] Setup running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s.\n" << endl;
     }//end-for
     
-    cout << "Setup average running time: " << (float)(avgSetup/((float)(nIterations)*1000000000.0)) << " s." << endl;   
+    if(nIterations > 1)
+        cout << "Setup average running time: " << (float)(avgSetup/((float)(nIterations)*1000000000.0)) << " s." << endl;   
     
     /* Short basis expansion */
     mat_ZZ S;
@@ -131,7 +141,7 @@ int main(void) {
     for(i = 0; i < T.NumRows(); i++)
         for(j = 0; j < T.NumCols(); j++)
             T[i][j] = to_RR(S[i][j]);
-        
+            
     /* Orthogonalization of short basis S - Usual procedure of (Lyubashevsky, and Prest, 2015), Algorithm 1 */
     for(int it = 0; it < nIterations; it++) {
         
@@ -146,7 +156,12 @@ int main(void) {
         
     }//end-for
     
-    cout << "[!] Gram-Schmidt orthogonalization average time: " << (float)(avgGSO/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;               
+    if(nIterations > 1)
+        cout << "[!] Gram-Schmidt orthogonalization average time: " << (float)(avgGSO/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;               
+    
+#ifdef PRINT_ALL
+    cout << "\n" << TTilde << endl;
+#endif
     
     T.kill();
     
@@ -157,6 +172,7 @@ int main(void) {
     for(i = 0; i < center.length(); i++)
         center[i] = to_RR(0);    
 
+    nIterations = 10;
     for(int it = 0; it < nIterations; it++) {
 
         /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c} - (Lyubashevsky, and Prest, 2015), Algorithm 8 */
@@ -167,11 +183,14 @@ int main(void) {
         avgGaussianSampler += (ts_end - ts_start);
         cout << "\n[!] GaussianSampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s.\n" << endl;               
  
+#ifdef PRINT_ALL
         cout << "\nSample from the lattice: " << sample << endl;
+#endif
 
     }//end-for
 
-    cout << "Gaussian-Sampler average running time: " << (float)(avgGaussianSampler/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
+    if(nIterations > 1)
+        cout << "Gaussian-Sampler average running time: " << (float)(avgGaussianSampler/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
 
     delete(hibe);
     

@@ -62,8 +62,7 @@ RR Samplers::Probability(RR x, RR sigma, RR c) {
     
 }//end-Probability()
 
-/* It selects between two given values depending on a bit. 
- * If the bit is zero, the output becomes "a" */
+// If the bit is zero, the output becomes "a" 
 int Select(int a, int b, unsigned bit) {
     
     unsigned mask;
@@ -569,11 +568,9 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
     
     RR::SetPrecision(precision);    
 
-    vec_RR C, sample;
-    int Z;
-    
-    RR d, innerp, innerp1;
-    RR sigma_i;
+    double sizeof_RR = pow(2.0, sizeof(RR));
+    RR d, innerp, innerp1, sigma_i, Z;
+    vec_RR C, sample;    
     int cols, i, j, rows;
     
     cols = BTilde.NumCols();
@@ -582,32 +579,32 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
     C.SetLength(cols);
     sample.SetLength(cols);
                 
-    C = center; // Center of the lattice        
+    C = center;
     
-    /* The inner product and norm operations are taken 
-     * in the inner product space H */
     for(i = rows-1; i >= 0; i--) {
         
         NTL::InnerProduct(innerp, BTilde[i], BTilde[i]);
-        NTL::InnerProduct(innerp1, C, BTilde[i]);
-        
-        // The new center for the discrete Gaussian
-        div(d, innerp1, innerp);
-        
-        // And the new standard deviation
+        NTL::InnerProduct(innerp1, C, BTilde[i]);        
+        div(d, innerp1, innerp);        
         div(sigma_i, sigma, sqrt(innerp));
         
-        this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d);             
-        
-        Z = this->KnuthYao(tailcut, sigma_i, d);
+        if(floor(sigma_i) == 0)
+            Z = d;
+        else {
+            if(sigma_i > sizeof_RR)
+                sigma_i = to_RR(2)*sigma;
+            this->BuildProbabilityMatrix(precision, tailcut, sigma_i, d);                     
+            Z = to_RR(this->KnuthYao(tailcut, sigma_i, d));            
+        }//end-else
         
         for(j = 0; j < B.NumCols(); j++)
-            C[j] = C[j] - to_RR(B[i][j]*Z);
+            C[j] = C[j] - to_RR(B[i][j])*Z;
         
     }//end-for
     
     sub(sample, center, C);    
-    cout << "Pass!" << endl;    
+    cout << "Pass!" << endl;
+    
     return sample;
     
 }//end-GaussianSamplerFromLattice()

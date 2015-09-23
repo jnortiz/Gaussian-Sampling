@@ -8,12 +8,9 @@
 #include <NTL/mat_ZZ.h>
 #include <NTL/ZZX.h>
 #include <NTL/ZZ.h>
-
 #include <NTL/mat_RR.h>
 #include <NTL/vec_RR.h>
 #include <NTL/RR.h>
-
-#include <complex>
 
 #ifndef SAMPLERS_H
 #define	SAMPLERS_H
@@ -51,7 +48,7 @@ private:
     int KnuthYao(int tailcut, RR sigma, RR c);
     void BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c);
     RR Probability(RR x, RR sigma, RR c);
-
+    
     /* Sampling from a continuous Gaussian distribution */
     RR Ziggurat(int m, RR sigma, int precision, RR tail);
     void ZCreatePartition(int m, RR sigma, int n, RR tail, RR& v);
