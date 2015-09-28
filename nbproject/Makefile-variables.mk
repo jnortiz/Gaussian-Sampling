@@ -9,19 +9,19 @@ CND_DISTDIR=dist
 # Debug configuration
 CND_PLATFORM_Debug=GNU-Linux-x86
 CND_ARTIFACT_DIR_Debug=dist/Debug/GNU-Linux-x86
-CND_ARTIFACT_NAME_Debug=pke-peks
-CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-Linux-x86/pke-peks
+CND_ARTIFACT_NAME_Debug=gaussian-sampling
+CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-Linux-x86/gaussian-sampling
 CND_PACKAGE_DIR_Debug=dist/Debug/GNU-Linux-x86/package
-CND_PACKAGE_NAME_Debug=pke-peks.tar
-CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux-x86/package/pke-peks.tar
+CND_PACKAGE_NAME_Debug=gaussian-sampling.tar
+CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux-x86/package/gaussian-sampling.tar
 # Release configuration
 CND_PLATFORM_Release=GNU-Linux-x86
 CND_ARTIFACT_DIR_Release=dist/Release/GNU-Linux-x86
-CND_ARTIFACT_NAME_Release=pke-peks
-CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux-x86/pke-peks
+CND_ARTIFACT_NAME_Release=gaussian-sampling
+CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux-x86/gaussian-sampling
 CND_PACKAGE_DIR_Release=dist/Release/GNU-Linux-x86/package
-CND_PACKAGE_NAME_Release=pke-peks.tar
-CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux-x86/package/pke-peks.tar
+CND_PACKAGE_NAME_Release=gaussian-sampling.tar
+CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux-x86/package/gaussian-sampling.tar
 #
 # include compiler specific variables
 #

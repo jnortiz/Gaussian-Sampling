@@ -50,6 +50,12 @@ Samplers::~Samplers() {
     this->f.kill();
 };
 
+ZZ mod(const ZZ& x, int q) {
+    ZZ a = x % to_ZZ(q);
+    NTL::sub(a, a, to_ZZ(ceil(to_RR(q/2))+1));
+    return a;
+}//end-mod()
+
 RR Samplers::Probability(RR x, RR sigma, RR c) {
     
     RR S = sigma*sqrt(2*ComputePi_RR());
@@ -201,15 +207,18 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
 }//end-BuildProbabilityMatrix()
 
 // Ziggurat method for sampling from a continuous Gaussian distribution
-RR Samplers::Ziggurat(int m, RR sigma, int precision, RR tail) {
+RR Samplers::Ziggurat(int m, RR sigma, int precision, RR v) {
     
+#ifdef DEBUG
     cout << "[*] Ziggurat status: ";
+#endif
+    
     RR::SetPrecision((long)precision);
     RR::SetOutputPrecision((long)precision);
     
     /* Create the partitioning first */
-    RR v; // Area of each rectangle
-    this->ZCreatePartition(m, sigma, precision, tail, v);
+//    RR v; // Area of each rectangle
+//    this->ZCreatePartition(m, sigma, precision, tail, v);
     
     /* Sampling phase */    
     RR c, U, z;
@@ -241,14 +250,18 @@ RR Samplers::Ziggurat(int m, RR sigma, int precision, RR tail) {
             
     }//end-for
     
-    cout << "Pass!\n";
+#ifdef DEBUG
+    cout << "Pass!" << endl;
+#endif
     
 }//end-Ziggurat()
 
 /* DZCreatePartition defines the x- and y-axes of the rectangles in the Gaussian distribution */
-void Samplers::ZCreatePartition(int m, RR sigma, int n, RR tail, RR& v) {
+RR Samplers::ZCreatePartition(int m, RR sigma, int n, RR tail) {
     
-    cout << "\n[*] DZCreatePartition status: ";
+#ifdef DEBUG
+    cout << "\n[*] ZCreatePartition status: ";
+#endif
     
     /* The Ziggurat algorithm was designed for centered Gaussian distributions; 
      i.e., c = 0. */
@@ -261,9 +274,8 @@ void Samplers::ZCreatePartition(int m, RR sigma, int n, RR tail, RR& v) {
      */
     
     Vec<RR> bestX, X;
-    RR bestdiff, r, z;
+    RR bestdiff, r, v, z;
     
-    RR statDistance = power2_RR(-((long)n));
     RR overM = to_RR(1)/to_RR(m);
     RR minusOne = to_RR(-1);
     RR zero = to_RR(0);
@@ -277,6 +289,7 @@ void Samplers::ZCreatePartition(int m, RR sigma, int n, RR tail, RR& v) {
     bestX[m-1] = minusOne;    
     z = minusOne;    
     r = (tail*sigma)/2; //r = x_m, the m-th x-value
+    v = 0;
     bestdiff = r; // Arbitrary initial value
     
     while(z != zero && r > zero) { // If r = 0 then the area v is also 0 (what doesn't make sense...)
@@ -327,10 +340,12 @@ void Samplers::ZCreatePartition(int m, RR sigma, int n, RR tail, RR& v) {
                
     if(bestX[m-1] != -1) { // Some partitioning was found
         
+#ifdef DEBUG
         cout << "Pass!" << endl;        
         cout << "\nFinal z value: " << bestdiff << endl;
         cout << "Final r value: " << X[m-1] << endl;
-        cout << "Statistical difference: " << to_RR(statDistance - bestdiff) << endl;
+        cout << "Statistical difference: " << to_RR(power2_RR(-((long)n)) - bestdiff) << endl;
+#endif
         
         this->X.SetLength(m);
         for(i = 0; i < this->X.length(); i++) {
@@ -338,8 +353,12 @@ void Samplers::ZCreatePartition(int m, RR sigma, int n, RR tail, RR& v) {
         }//end-for
         
     } else // No valid partition was found
+#ifdef DEBUG
         cout << "Error!" << endl;
-            
+#endif
+    
+    return v;
+    
 }//end-DZCreatePartition()
 
 /* It is used in DZCreatePartition to define the distance y0 */
@@ -609,6 +628,115 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
     
 }//end-GaussianSamplerFromLattice()
 
+void Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n) {
+    
+    cout << "[*] Offline SampleD status: ";
+    
+    Z.SetDims(n, n);
+    
+    mat_RR auxB, auxZ, inv_auxB;   
+    NTL::conv(auxB, B);
+    NTL::inv(inv_auxB, auxB);
+    NTL::mul(auxZ, (double)q, inv_auxB);
+    NTL::conv(Z, auxZ);    
+    auxB.kill();
+    auxZ.kill();
+    inv_auxB.kill();
+    
+    mat_ZZ transposeB, square;
+    mat_RR Sigma1, square_RR;
+    RR r_square;
+    NTL::mul(r_square, r, r);
+    
+    NTL::transpose(transposeB, B);
+    NTL::mul(square, B, transposeB);
+    transposeB.kill();
+    NTL::conv(square_RR, square);
+    square.kill();
+    NTL::mul(Sigma1, square_RR, to_RR(2)*r_square);
+    square_RR.kill();
+    
+    mat_RR Sigma2;
+    NTL::sub(Sigma2, Sigma, Sigma1);
+    Sigma1.kill();    
+    
+    for(int i = 0; i < Sigma2.NumRows(); i++) 
+        for(int j = 0; j < Sigma2.NumCols(); j++)
+            NTL::sub(Sigma2[i][j], Sigma2[i][j], r*r);
+    this->CholeskyDecomposition(B2, Sigma2, n); // Computes the decomposition of Sigma2 into B1.B1^t
+    Sigma2.kill();
+        
+    cout << "Pass!" << endl;
+    
+}//end-OfflineSampleD()
+
+vec_ZZ Samplers::RefreshSampleD(const mat_RR& B2, RR r, int n) {
+    
+    vec_ZZ x2;
+    x2.SetLength(n);
+    
+    vec_RR w;
+    w.SetLength(n);
+    RR v = this->ZCreatePartition(64, to_RR(1), 107, to_RR(13));
+    
+    for(int i = 0; i < w.length(); i++)
+        w[i] = this->Ziggurat(64, to_RR(1), 107, v);
+    
+    vec_RR mult;
+    NTL::mul(mult, w, B2);
+    w.kill();
+    
+    for(int i = 0; i < n; i++) {
+        this->BuildProbabilityMatrix(107, 13, r, mult[i]); // Standard deviation r, centered in w[i]
+        x2[i] = to_ZZ(this->KnuthYao(13, r, mult[i]));
+    }//end-for
+    mult.kill();
+
+    return x2;
+    
+}//end-RefreshSampleD()
+
+vec_ZZ Samplers::SampleD(const mat_ZZ& B, const mat_ZZ Z, const vec_ZZ& c, const vec_ZZ& x2, int q, RR r) {
+    
+    vec_ZZ subt;
+    NTL::sub(subt, c, x2);
+    for(int i = 0; i < subt.length(); i++)
+        subt[i] = mod(subt[i], q);
+    
+    vec_ZZ mult;
+    NTL::mul(mult, Z, subt);
+    subt.kill();    
+    vec_RR center;    
+    center.SetLength(mult.length());    
+    for(int i = 0; i < mult.length(); i++)
+        NTL::div(center[i], to_RR(mod(mult[i], q)), to_RR(q));
+    mult.kill();
+    
+    vec_ZZ rounding;
+    rounding.SetLength(center.length());        
+    for(int i = 0; i < center.length(); i++) {
+        this->BuildProbabilityMatrix(107, 13, r, center[i]);
+        rounding[i] = to_ZZ(this->KnuthYao(13, r, center[i]));
+        rounding[i] = mod(rounding[i], q);
+    }//end-for
+    center.kill();
+    
+    vec_ZZ mult1;
+    NTL::mul(mult1, B, rounding);
+    rounding.kill();
+    for(int i = 0; i < mult1.length(); i++)
+        mult1[i] = mod(mult1[i], q);
+    
+    vec_ZZ x;
+    NTL::sub(x, c, mult1);
+    mult1.kill();
+    for(int i = 0; i < x.length(); i++)
+        x[i] = mod(x[i], q);
+    
+    return x;
+    
+}//end-SampleD()
+
 /* Computes the decomposition of A, a square matrix, into B*B^t and returns the lower-triangular matrix B */
 void Samplers::CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<double> >& A, int n) {
     
@@ -637,6 +765,33 @@ void Samplers::CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<doubl
             else
                 B[i][j] = 1.0/B[j][j]*(A[i][j] - s);
             
+        }//end-for
+    }//end-for
+    
+}//end-CholeskyDecomposition()
+
+void Samplers::CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n) {
+    
+    int i, j, k;
+    RR subt, overB, mult, s;
+    
+    B.SetDims(n, n);
+    
+    for(i = 0; i < n; i++) {
+        for(j = 0; j <= i; j++) { 
+            s = to_RR(0);            
+            for(k = 0; k < j; k++) {
+                NTL::mul(mult, B[i][k], B[j][k]);
+                NTL::add(s, s, mult);
+            }//end-for  
+            
+            NTL::sub(subt, A[i][j], s);
+            if(i == j)
+                B[i][j] = sqrt(subt);
+            else {
+                NTL::div(overB, to_RR(1), B[j][j]);
+                NTL::mul(B[i][j], overB, subt);
+            }//end-else
         }//end-for
     }//end-for
     
@@ -688,17 +843,17 @@ void Samplers::RotBasis(mat_ZZ& T, const Vec< Vec<ZZX> >& S, int n) {
      * A (nm x nm)-dimension integer matrix
      */
         
-    Vec< Vec<ZZX> > outInnerRot;
     int i, j, k, l;
     int m = S.length();
     
     T.SetDims(m*n, m*n);
     
     for(i = 0; i < m; i++) {
+        Vec< Vec<ZZX> > outInnerRot;
         this->Rot(outInnerRot, S[i], m, n);        
         for(j = 0; j < n; j++) // For each row
             for(k = 0; k < m; k++) // For each column
-                for(l = 0; l < n; l++) // For each coefficient in S[i][j]
+                for(l = 0; l < n; l++)
                     T[i*n+j][k*n+l] = to_ZZ(outInnerRot[j][k][l]);                        
     }//end-for    
     
@@ -707,7 +862,6 @@ void Samplers::RotBasis(mat_ZZ& T, const Vec< Vec<ZZX> >& S, int n) {
 /* Applies the rot operator component-wise in a row vector a */
 void Samplers::Rot(Vec< Vec<ZZX> >& A, const Vec<ZZX>& a, int m, int n) {
     
-    Vec<ZZX> out;
     int i, j;
     
     A.SetLength(n);    
@@ -718,6 +872,7 @@ void Samplers::Rot(Vec< Vec<ZZX> >& A, const Vec<ZZX>& a, int m, int n) {
     }//end-for
     
     for(j = 0; j < m; j++) {
+        Vec<ZZX> out;
         this->rot(out, a[j], n);
         for(i = 0; i < n; i++)
             A[i][j] = out[i];
@@ -733,11 +888,12 @@ void Samplers::rot(Vec<ZZX>& out, const ZZX& b, int n) {
     out[0].SetLength(n);
     isometry.SetLength(n);
     
-    out[0] = isometry = b;
+    out[0] = b;
+    isometry = b;
     
     for(int i = 1; i < n; i++) {
+        out[i].SetLength(n);
         isometry = this->Isometry(isometry, n);
-        out.SetLength(n);
         out[i] = isometry;
     }//end-for
    

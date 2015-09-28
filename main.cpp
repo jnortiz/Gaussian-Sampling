@@ -25,7 +25,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 2;
+    int parameter_set_id = 4;
     
     switch(parameter_set_id) {
         case 0: {
@@ -62,6 +62,14 @@ int main(void) {
             q = 11;
             m1 = 5;
             m2 = 30;
+            break;
+        }
+        case 4: {
+            h = 10;
+            k = 1;
+            q = 3;
+            m1 = 3;
+            m2 = 9;
             break;
         }
         default: {
@@ -101,9 +109,8 @@ int main(void) {
     
     HIBE *hibe = new HIBE(q, m1, m2, k); // Parameters required only in Gaussian sampling from lattices  
     
-    timestamp_t avgSetup = 0.0, avgGSO = 0.0, avgGaussianSampler = 0.0;            
+    timestamp_t avgSetup = 0.0, avgSampleD = 0.0;            
 
-    RR sigmaRR;
     int nIterations, tailcut;
     long precision;
 
@@ -118,80 +125,69 @@ int main(void) {
         ts_end = get_timestamp();            
         
         avgSetup += (ts_end - ts_start);
-        cout << "[!] Setup running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s.\n" << endl;
+        cout << "[!] Setup running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
     }//end-for
     
+    cout << endl;
     if(nIterations > 1)
         cout << "Setup average running time: " << (float)(avgSetup/((float)(nIterations)*1000000000.0)) << " s." << endl;   
+        
+    mat_RR B, B2, Sigma;
+    mat_ZZ S, Z;
+    vec_ZZ x2;
+    RR normOfB, R, s;
+    
+    int m = hibe->GetM();
+    int n = hibe->GetN();
     
     /* Short basis expansion */
-    mat_ZZ S;
-    mat_RR T, TTilde;
-    vec_RR center, sample;    
-    RR normTTilde;
+    hibe->GetSampler()->RotBasis(S, hibe->GetMsk(), hibe->GetN());
+    
+    /* Getting the norm of S */
+    NTL::conv(B, S);    
+    normOfB = hibe->GetSampler()->NormOfBasis(B);
+    B.kill();
+    
+    /* Computing parameters r and s of Peikert's offline phase */
+    R = log(m*n)/log(2);
+    s = R*(2*normOfB + 1) + 1;    
+    NTL::mul(s, s, s);
+    
+    Sigma.SetDims(m*n, m*n);
+    for(int i = 0; i < Sigma.NumRows(); i++)
+        Sigma[i][i] = s;
+        
+    /* Computing the Peikert's algorithm offline phase */
+    hibe->GetSampler()->OfflineSampleD(Z, B2, S, q, R, Sigma, m*n);    
+    Sigma.kill();
+    x2 = hibe->GetSampler()->RefreshSampleD(B2, R, m*n);
 
-    int i, j, length, n;
-    n = hibe->GetN();
-
-    hibe->GetSampler()->RotBasis(S, hibe->GetMsk(), n);
-
-    length = S.NumRows(); // Square matrix
-    T.SetDims(length, length);
-
-    for(i = 0; i < T.NumRows(); i++)
-        for(j = 0; j < T.NumCols(); j++)
-            T[i][j] = to_RR(S[i][j]);
-            
-    /* Orthogonalization of short basis S - Usual procedure of (Lyubashevsky, and Prest, 2015), Algorithm 1 */
+    vec_ZZ center;    
+    center.SetLength(S.NumRows());
+    for(int i = 0; i < center.length(); i++)
+        center[i] = RandomBnd(q);    
+    
+    /* Getting a sample from the lattice using the Peikert's algorithm */
+    vec_ZZ sample;
+    
     for(int it = 0; it < nIterations; it++) {
-        
-        ts_start = get_timestamp();
-        normTTilde = hibe->GetSampler()->GramSchmidtProcess(TTilde, T, precision);
-        ts_end = get_timestamp();            
-
-        avgGSO += (ts_end - ts_start);
-        
-        cout << "[!] Norm of Gram-Schmidt reduced basis: " << normTTilde << endl;            
-        cout << "[!] Gram-Schmidt orthogonalization process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s.\n" << endl;
-        
-    }//end-for
-    
-    if(nIterations > 1)
-        cout << "[!] Gram-Schmidt orthogonalization average time: " << (float)(avgGSO/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;               
-    
-#ifdef PRINT_ALL
-    cout << "\n" << TTilde << endl;
-#endif
-    
-    T.kill();
-    
-    /* Parameters of distribution over the lattice span by A and T_A */
-    sigmaRR = normTTilde*(log(n)/log(2)); // sigma >= norm(ATilde)*omega(sqrt(log(n)))
-    
-    center.SetLength(length);
-    for(i = 0; i < center.length(); i++)
-        center[i] = to_RR(0);    
-
-    nIterations = 10;
-    for(int it = 0; it < nIterations; it++) {
-
-        /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c} - (Lyubashevsky, and Prest, 2015), Algorithm 8 */
         ts_start = get_timestamp();    
-        sample = hibe->GetSampler()->GaussianSamplerFromLattice(S, TTilde, sigmaRR, precision, tailcut, center);            
+        sample = hibe->GetSampler()->SampleD(S, Z, center, x2, q, R);
         ts_end = get_timestamp();    
 
-        avgGaussianSampler += (ts_end - ts_start);
-        cout << "\n[!] GaussianSampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s.\n" << endl;               
- 
-#ifdef PRINT_ALL
-        cout << "\nSample from the lattice: " << sample << endl;
-#endif
-
+        avgSampleD += (ts_end - ts_start);
+        cout << "[!] SampleD running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+        cout << "[>] Sample from lattice: " << sample << endl;
     }//end-for
-
+    
     if(nIterations > 1)
-        cout << "Gaussian-Sampler average running time: " << (float)(avgGaussianSampler/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
-
+        cout << "SampleD average running time: " << (float)(avgSampleD/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
+    
+    center.kill();
+    S.kill();
+    Z.kill();
+    x2.kill();
+    
     delete(hibe);
     
     return 0;
