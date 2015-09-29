@@ -206,22 +206,19 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
                 
 }//end-BuildProbabilityMatrix()
 
-// Ziggurat method for sampling from a continuous Gaussian distribution
-RR Samplers::Ziggurat(int m, RR sigma, int precision, RR v) {
+RR Samplers::Ziggurat(int m, RR sigma, long precision, RR v) {
+
+/*
+ * Important: run ZCreatePartition() procedure before calling the Ziggurat sampler.
+ */
     
 #ifdef DEBUG
     cout << "[*] Ziggurat status: ";
 #endif
     
-    RR::SetPrecision((long)precision);
-    RR::SetOutputPrecision((long)precision);
+    RR::SetPrecision(precision);
     
-    /* Create the partitioning first */
-//    RR v; // Area of each rectangle
-//    this->ZCreatePartition(m, sigma, precision, tail, v);
-    
-    /* Sampling phase */    
-    RR c, U, z;
+    RR c, probX, probX1, probZ, U, z;
     int i;
     double ulong_size = (double)(sizeof(unsigned long)*8);
     
@@ -229,23 +226,28 @@ RR Samplers::Ziggurat(int m, RR sigma, int precision, RR v) {
     
     for(;;) {
     
-        i = RandomBnd(m); // Sample a random value in {0, ..., m-1}
-        U = to_RR((RandomBnd(ulong_size-1) + 1)/ulong_size); // Uniform sample in (0, 1)
+        i = NTL::RandomBnd((long)(m-1)) + 1;
+        U = to_RR((NTL::RandomBnd((long)(ulong_size-1)) + 1)/ulong_size); // Uniform sample in (0, 1)
         
-        if(i > 0)
-            z = U*this->X[i];
-        else
-            z = U*v/this->Probability(X[i], sigma, c);
-        
-        if(z > this->X[i+1])
+        if(i < (m-1))
+            NTL::mul(z, U, this->X[i]);
+        else // Base strip
+            NTL::div(z, U*v, this->Probability(X[i], sigma, c));
+            
+        if(z < this->X[i-1]) // The sample is in the left-most part of the i-th rectangle
             return z;
-        
-        if(i == 0) // Sampling from the tail
+
+        if(i == (m-1))
             return this->NewMarsagliaTailMethod(this->X[m-1]);
         
+        probX = this->Probability(X[i], sigma, c);
+        probX1 = this->Probability(this->X[i+1], sigma, c);
+        probZ = this->Probability(z, sigma, c);
+
         U = to_RR((RandomBnd(ulong_size-1) + 1)/ulong_size);
-        
-        if(i > 0 && U*(this->Probability(X[i], sigma, c) - this->Probability(this->X[i+1], sigma, c)) < (this->Probability(z, sigma, c) - this->Probability(this->X[i+1], sigma, c)))
+
+        // The sample can be in the right-most part of the i-th rectangle        
+        if(i > 0 && U*(probX - probX1) < (probZ - probX1))
             return z;
             
     }//end-for
@@ -257,7 +259,9 @@ RR Samplers::Ziggurat(int m, RR sigma, int precision, RR v) {
 }//end-Ziggurat()
 
 /* DZCreatePartition defines the x- and y-axes of the rectangles in the Gaussian distribution */
-RR Samplers::ZCreatePartition(int m, RR sigma, int n, RR tail) {
+RR Samplers::ZCreatePartition(int m, RR sigma, long n, RR tail) {
+    
+    RR::SetPrecision(n);
     
 #ifdef DEBUG
     cout << "\n[*] ZCreatePartition status: ";
@@ -288,7 +292,7 @@ RR Samplers::ZCreatePartition(int m, RR sigma, int n, RR tail) {
     
     bestX[m-1] = minusOne;    
     z = minusOne;    
-    r = (tail*sigma)/2; //r = x_m, the m-th x-value
+    r = (tail*sigma)/2; // r = x_m, the m-th x-value
     v = 0;
     bestdiff = r; // Arbitrary initial value
     
@@ -628,17 +632,22 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
     
 }//end-GaussianSamplerFromLattice()
 
-void Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n) {
+int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n, long precision) {
+    
+    RR::SetPrecision(precision);    
     
     cout << "[*] Offline SampleD status: ";
-    
-    Z.SetDims(n, n);
     
     mat_RR auxB, auxZ, inv_auxB;   
     NTL::conv(auxB, B);
     NTL::inv(inv_auxB, auxB);
     NTL::mul(auxZ, (double)q, inv_auxB);
-    NTL::conv(Z, auxZ);    
+    
+    Z.SetDims(auxZ.NumRows(), auxZ.NumCols());
+    for(int i = 0; i < Z.NumRows(); i++)
+        for(int j = 0; j < Z.NumCols(); j++)
+            NTL::TruncToZZ(Z[i][j], auxZ[i][j]);
+    
     auxB.kill();
     auxZ.kill();
     inv_auxB.kill();
@@ -646,8 +655,7 @@ void Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR 
     mat_ZZ transposeB, square;
     mat_RR Sigma1, square_RR;
     RR r_square;
-    NTL::mul(r_square, r, r);
-    
+    NTL::mul(r_square, r, r);    
     NTL::transpose(transposeB, B);
     NTL::mul(square, B, transposeB);
     transposeB.kill();
@@ -662,11 +670,15 @@ void Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR 
     
     for(int i = 0; i < Sigma2.NumRows(); i++) 
         for(int j = 0; j < Sigma2.NumCols(); j++)
-            NTL::sub(Sigma2[i][j], Sigma2[i][j], r*r);
-    this->CholeskyDecomposition(B2, Sigma2, n); // Computes the decomposition of Sigma2 into B1.B1^t
+            NTL::sub(Sigma2[i][j], Sigma2[i][j], r_square);
+    int outputCholesky = this->CholeskyDecomposition(B2, Sigma2, n); // Computes the decomposition of Sigma2 into B1.B1^t
     Sigma2.kill();
-        
+    
+    if(outputCholesky == -1)
+        return -1;
+
     cout << "Pass!" << endl;
+    return 0;
     
 }//end-OfflineSampleD()
 
@@ -677,7 +689,7 @@ vec_ZZ Samplers::RefreshSampleD(const mat_RR& B2, RR r, int n) {
     
     vec_RR w;
     w.SetLength(n);
-    RR v = this->ZCreatePartition(64, to_RR(1), 107, to_RR(13));
+    RR v = this->ZCreatePartition(64, to_RR(1), (long)(107), to_RR(13));
     
     for(int i = 0; i < w.length(); i++)
         w[i] = this->Ziggurat(64, to_RR(1), 107, v);
@@ -770,7 +782,28 @@ void Samplers::CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<doubl
     
 }//end-CholeskyDecomposition()
 
-void Samplers::CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n) {
+int Samplers::CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n) {
+
+/*
+ * Every symmetric, positive definite matrix A can be decomposed into a product 
+ * of a unique lower triangular matrix L and its transpose.
+ * 
+ * If (A[i][j] - s) < 0, then A is not positive definite matrix or A is 
+ * assymmetric, e.g. A is different of its transpose.
+ * 
+ */
+
+    mat_RR transposeA;
+    NTL::transpose(transposeA, A);
+    
+    for(int i = 0; i < A.NumRows(); i++)
+        for(int j = 0; j < A.NumCols(); j++)
+            if(A[i][j] != transposeA[i][j]) {
+                cout << "[!] The matrix A is not symmetric." << endl;
+                transposeA.kill();
+                return -1;
+            }//end-if
+    transposeA.kill();
     
     int i, j, k;
     RR subt, overB, mult, s;
@@ -786,14 +819,22 @@ void Samplers::CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n) {
             }//end-for  
             
             NTL::sub(subt, A[i][j], s);
-            if(i == j)
-                B[i][j] = sqrt(subt);
-            else {
+                        
+            if(i == j) {
+                if(subt < to_RR(0)) {
+                    cout << "[!] The matrix A is not positive definite." << endl;
+                    cout << subt << endl;
+                    return -1;
+                }//end-if
+                B[i][j] = sqrt(subt);                
+            } else {
                 NTL::div(overB, to_RR(1), B[j][j]);
                 NTL::mul(B[i][j], overB, subt);
             }//end-else
         }//end-for
     }//end-for
+    
+    return 0;
     
 }//end-CholeskyDecomposition()
 

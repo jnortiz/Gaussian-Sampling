@@ -16,7 +16,7 @@ static timestamp_t get_timestamp() {
     struct timespec now;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
     return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
-}
+}//end-get_timestamp()
 
 int main(void) {
 
@@ -25,7 +25,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 4;
+    int parameter_set_id = 2;
     
     switch(parameter_set_id) {
         case 0: {
@@ -109,7 +109,7 @@ int main(void) {
     
     HIBE *hibe = new HIBE(q, m1, m2, k); // Parameters required only in Gaussian sampling from lattices  
     
-    timestamp_t avgSetup = 0.0, avgSampleD = 0.0;            
+    timestamp_t avgSetup = 0.0, avgRefreshing = 0.0, avgSampleD = 0.0;            
 
     int nIterations, tailcut;
     long precision;
@@ -142,7 +142,7 @@ int main(void) {
     
     /* Short basis expansion */
     hibe->GetSampler()->RotBasis(S, hibe->GetMsk(), hibe->GetN());
-    
+        
     /* Getting the norm of S */
     NTL::conv(B, S);    
     normOfB = hibe->GetSampler()->NormOfBasis(B);
@@ -150,7 +150,7 @@ int main(void) {
     
     /* Computing parameters r and s of Peikert's offline phase */
     R = log(m*n)/log(2);
-    s = R*(2*normOfB + 1) + 1;    
+    s = R*(to_RR(lambda)*normOfB + 1);    
     NTL::mul(s, s, s);
     
     Sigma.SetDims(m*n, m*n);
@@ -158,32 +158,57 @@ int main(void) {
         Sigma[i][i] = s;
         
     /* Computing the Peikert's algorithm offline phase */
-    hibe->GetSampler()->OfflineSampleD(Z, B2, S, q, R, Sigma, m*n);    
+    ts_start = get_timestamp();    
+    int outputOfflineSampleD = hibe->GetSampler()->OfflineSampleD(Z, B2, S, q, R, Sigma, m*n, precision);    
+    ts_end = get_timestamp(); 
+    
     Sigma.kill();
-    x2 = hibe->GetSampler()->RefreshSampleD(B2, R, m*n);
+    
+    cout << "[!] Offline phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+    
+    nIterations = 10;
+    if(outputOfflineSampleD == 0) {        
+        
+        vec_ZZ center, sample;    
+        center.SetLength(S.NumRows());
+        
+        for(int it = 0; it < nIterations; it++) {
+            
+            // Getting a fresh vector x2
+            ts_start = get_timestamp();        
+            x2 = hibe->GetSampler()->RefreshSampleD(B2, R, m*n);
+            ts_end = get_timestamp();    
+            
+            cout << "[!] Refreshing phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
 
-    vec_ZZ center;    
-    center.SetLength(S.NumRows());
-    for(int i = 0; i < center.length(); i++)
-        center[i] = RandomBnd(q);    
-    
-    /* Getting a sample from the lattice using the Peikert's algorithm */
-    vec_ZZ sample;
-    
-    for(int it = 0; it < nIterations; it++) {
-        ts_start = get_timestamp();    
-        sample = hibe->GetSampler()->SampleD(S, Z, center, x2, q, R);
-        ts_end = get_timestamp();    
+            avgRefreshing += (ts_end - ts_start);
+            
+            for(int i = 0; i < center.length(); i++)
+                center[i] = RandomBnd(q);    
 
-        avgSampleD += (ts_end - ts_start);
-        cout << "[!] SampleD running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-        cout << "[>] Sample from lattice: " << sample << endl;
-    }//end-for
+            /* Getting a sample from the lattice using the Peikert's algorithm */
+            ts_start = get_timestamp();    
+            sample = hibe->GetSampler()->SampleD(S, Z, center, x2, q, R);
+            ts_end = get_timestamp();    
+
+            avgSampleD += (ts_end - ts_start);
+            
+            cout << "[!] SampleD running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+            cout << "[>] Sample from lattice: " << sample << endl;
+            
+        }//end-for
+
+        cout << endl;
+        if(nIterations > 1) {
+            cout << "Refreshing phase of Peikert's algorithm average running time: " << (float)(avgRefreshing/((float)(nIterations)*1000000000.0)) << " s." << endl;
+            cout << "SampleD average running time: " << (float)(avgSampleD/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
+        }//end-if
+        
+        center.kill();
+        sample.kill();
+        
+    }//end-if
     
-    if(nIterations > 1)
-        cout << "SampleD average running time: " << (float)(avgSampleD/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
-    
-    center.kill();
     S.kill();
     Z.kill();
     x2.kill();

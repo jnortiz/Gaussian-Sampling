@@ -31,7 +31,7 @@ public:
     vec_RR GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center);
     
     RR NormOfBasis(const mat_RR& B);
-    void OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n);
+    int OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n, long precision);
     vec_ZZ RefreshSampleD(const mat_RR& B2, RR r, int n);
     vec_ZZ SampleD(const mat_ZZ& B, const mat_ZZ Z, const vec_ZZ& c, const vec_ZZ& x2, int q, RR r);
     
@@ -55,8 +55,8 @@ private:
     RR Probability(RR x, RR sigma, RR c);
     
     /* Sampling from a continuous Gaussian distribution */
-    RR Ziggurat(int m, RR sigma, int precision, RR v);
-    RR ZCreatePartition(int m, RR sigma, int n, RR tail);
+    RR Ziggurat(int m, RR sigma, long precision, RR v);
+    RR ZCreatePartition(int m, RR sigma, long n, RR tail);
     RR ZRecursion(Vec<RR>& X, int m, RR r, RR sigma, RR& v);
     RR NewMarsagliaTailMethod(RR r);
         
@@ -72,7 +72,7 @@ private:
     /* Procedure for T = BB^t used in Peikert algorithm - Lattice sampling */
     void SetCenter(vec_RR& c, const mat_ZZ& S);
     void CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<double> >& A, int n);    
-    void CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n);    
+    int CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n);    
         
     void Rot(Vec< Vec<ZZX> >& A, const Vec<ZZX>& a, int m, int n); // RotBasis()
     void rot(Vec<ZZX>& out, const ZZX& b, int n); // Rot()
