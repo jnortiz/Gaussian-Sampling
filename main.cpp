@@ -25,7 +25,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 4;
+    int parameter_set_id = 2;
     
     switch(parameter_set_id) {
         case 0: {
@@ -154,10 +154,13 @@ int main(void) {
     R = log(m*n)/log(2);
     s = R*(to_RR(lambda)*normOfB + 1);    
     NTL::mul(s, s, s);
+
+    RR factor;
+    NTL::div(factor, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
     
     Sigma.SetDims(m*n, m*n);
     for(int i = 0; i < Sigma.NumRows(); i++)
-        Sigma[i][i] = s;
+        NTL::mul(Sigma[i][i], s, factor);
             
     /* Computing the Peikert's algorithm offline phase */
     ts_start = get_timestamp();    

@@ -634,9 +634,16 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
 
 int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n, long precision) {
     
+    /*
+     * TODO: "In this paper we implicitly scale all covariance matrices by a 2π factor"
+     */
+    
     RR::SetPrecision(precision);    
     
     cout << "[*] Offline SampleD status: ";
+    
+    RR factor;
+    NTL::div(factor, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
     
     mat_RR auxB, auxZ, inv_auxB;   
     NTL::conv(auxB, B);
@@ -661,7 +668,7 @@ int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r
     transposeB.kill();
     NTL::conv(square_RR, square);
     square.kill();
-    NTL::mul(Sigma1, square_RR, to_RR(2)*r_square);
+    NTL::mul(Sigma1, square_RR, to_RR(2)*r_square*factor);
     square_RR.kill();
     
     mat_RR Sigma2;
@@ -669,8 +676,10 @@ int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r
     Sigma1.kill();    
     
     for(int i = 0; i < Sigma2.NumRows(); i++) 
-        for(int j = 0; j < Sigma2.NumCols(); j++)
+        for(int j = 0; j < Sigma2.NumCols(); j++) {
+            NTL::mul(Sigma2[i][j], Sigma2[i][j], factor);
             NTL::sub(Sigma2[i][j], Sigma2[i][j], r_square);
+        }
     int outputCholesky = this->CholeskyDecomposition(B2, Sigma2, n); // Computes the decomposition of Sigma2 into B1.B1^t
     Sigma2.kill();
     
