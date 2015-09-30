@@ -689,10 +689,12 @@ vec_ZZ Samplers::RefreshSampleD(const mat_RR& B2, RR r, int n) {
     
     vec_RR w;
     w.SetLength(n);
-    RR v = this->ZCreatePartition(64, to_RR(1), (long)(107), to_RR(13));
+    RR std_deviation;
+    NTL::div(std_deviation, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
+    RR v = this->ZCreatePartition(64, std_deviation, (long)(107), to_RR(13));
     
     for(int i = 0; i < w.length(); i++)
-        w[i] = this->Ziggurat(64, to_RR(1), 107, v);
+        w[i] = this->Ziggurat(64, std_deviation, 107, v);
     
     vec_RR mult;
     NTL::mul(mult, w, B2);
