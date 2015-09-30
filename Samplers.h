@@ -33,7 +33,7 @@ public:
     RR NormOfBasis(const mat_RR& B);
     int OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n, long precision);
     vec_ZZ RefreshSampleD(const mat_RR& B2, RR r, int n);
-    vec_ZZ SampleD(const mat_ZZ& B, const mat_ZZ Z, const vec_ZZ& c, const vec_ZZ& x2, int q, RR r);
+    vec_ZZ SampleD(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c, const vec_ZZ_p& x2, long q, RR r);
     
     void RotBasis(mat_ZZ& T, const Vec< Vec<ZZX> >& S, int n);
     

@@ -25,7 +25,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 2;
+    int parameter_set_id = 3;
     
     switch(parameter_set_id) {
         case 0: {
@@ -134,6 +134,7 @@ int main(void) {
         
     mat_RR B, B2, Sigma;
     mat_ZZ S, Z;
+    mat_ZZ_p S_p;
     vec_ZZ x2;
     RR normOfB, R, s;
     
@@ -142,7 +143,8 @@ int main(void) {
     
     /* Short basis expansion */
     hibe->GetSampler()->RotBasis(S, hibe->GetMsk(), hibe->GetN());
-        
+    NTL::conv(S_p, S);
+    
     /* Getting the norm of S */
     NTL::conv(B, S);    
     normOfB = hibe->GetSampler()->NormOfBasis(B);
@@ -156,12 +158,16 @@ int main(void) {
     Sigma.SetDims(m*n, m*n);
     for(int i = 0; i < Sigma.NumRows(); i++)
         Sigma[i][i] = s;
-        
+            
     /* Computing the Peikert's algorithm offline phase */
     ts_start = get_timestamp();    
     int outputOfflineSampleD = hibe->GetSampler()->OfflineSampleD(Z, B2, S, q, R, Sigma, m*n, precision);    
-    ts_end = get_timestamp(); 
+    ts_end = get_timestamp();
     
+    mat_ZZ_p Z_p;
+    NTL::conv(Z_p, Z);
+    Z.kill();
+    S.kill();    
     Sigma.kill();
     
     cout << "[!] Offline phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -169,8 +175,9 @@ int main(void) {
     nIterations = 10;
     if(outputOfflineSampleD == 0) {        
         
+        vec_ZZ_p c_p, x2_p;
         vec_ZZ center, sample;    
-        center.SetLength(S.NumRows());
+        center.SetLength(S_p.NumRows());
         
         for(int it = 0; it < nIterations; it++) {
             
@@ -186,9 +193,12 @@ int main(void) {
             for(int i = 0; i < center.length(); i++)
                 center[i] = RandomBnd(q);    
 
+            NTL::conv(c_p, center);
+            NTL::conv(x2_p, x2);
+            
             /* Getting a sample from the lattice using the Peikert's algorithm */
             ts_start = get_timestamp();    
-            sample = hibe->GetSampler()->SampleD(S, Z, center, x2, q, R);
+            sample = hibe->GetSampler()->SampleD(S_p, Z_p, c_p, x2_p, (long)q, R);
             ts_end = get_timestamp();    
 
             avgSampleD += (ts_end - ts_start);
@@ -204,14 +214,17 @@ int main(void) {
             cout << "SampleD average running time: " << (float)(avgSampleD/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
         }//end-if
         
+        c_p.kill();
+        x2_p.kill();
         center.kill();
         sample.kill();
         
     }//end-if
     
-    S.kill();
-    Z.kill();
+    B2.kill();
     x2.kill();
+    S_p.kill();
+    Z_p.kill();
     
     delete(hibe);
     

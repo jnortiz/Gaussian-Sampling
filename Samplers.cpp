@@ -708,44 +708,48 @@ vec_ZZ Samplers::RefreshSampleD(const mat_RR& B2, RR r, int n) {
     
 }//end-RefreshSampleD()
 
-vec_ZZ Samplers::SampleD(const mat_ZZ& B, const mat_ZZ Z, const vec_ZZ& c, const vec_ZZ& x2, int q, RR r) {
+vec_ZZ Samplers::SampleD(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c, const vec_ZZ_p& x2, long q, RR r) {
     
-    vec_ZZ subt;
+    vec_ZZ_p subt, mult;
     NTL::sub(subt, c, x2);
-    for(int i = 0; i < subt.length(); i++)
-        subt[i] = mod(subt[i], q);
-    
-    vec_ZZ mult;
     NTL::mul(mult, Z, subt);
-    subt.kill();    
-    vec_RR center;    
-    center.SetLength(mult.length());    
-    for(int i = 0; i < mult.length(); i++)
-        NTL::div(center[i], to_RR(mod(mult[i], q)), to_RR(q));
+    subt.kill();
+    
+    vec_ZZ aux_mult;
+    NTL::conv(aux_mult, mult);
     mult.kill();
     
-    vec_ZZ rounding;
+    vec_RR center;    
+    center.SetLength(aux_mult.length());    
+    for(int i = 0; i < aux_mult.length(); i++)
+        NTL::div(center[i], to_RR(aux_mult[i]), to_RR(q));
+    aux_mult.kill();
+    
+    vec_ZZ_p rounding;
     rounding.SetLength(center.length());        
     for(int i = 0; i < center.length(); i++) {
         this->BuildProbabilityMatrix(107, 13, r, center[i]);
-        rounding[i] = to_ZZ(this->KnuthYao(13, r, center[i]));
-        rounding[i] = mod(rounding[i], q);
+        rounding[i] = to_ZZ_p((long)(this->KnuthYao(13, r, center[i])));
     }//end-for
     center.kill();
     
-    vec_ZZ mult1;
+    vec_ZZ_p mult1;
     NTL::mul(mult1, B, rounding);
     rounding.kill();
-    for(int i = 0; i < mult1.length(); i++)
-        mult1[i] = mod(mult1[i], q);
     
-    vec_ZZ x;
+    vec_ZZ_p x;
     NTL::sub(x, c, mult1);
     mult1.kill();
-    for(int i = 0; i < x.length(); i++)
-        x[i] = mod(x[i], q);
     
-    return x;
+    vec_ZZ aux_x;
+    NTL::conv(aux_x, x);
+    x.kill();
+    
+    for(int i = 0; i < aux_x.length(); i++)
+        if(aux_x[i] > floor(q/2))
+            NTL::sub(aux_x[i], aux_x[i], q);
+    
+    return aux_x;
     
 }//end-SampleD()
 
