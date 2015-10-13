@@ -634,36 +634,41 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
 
 int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n, long precision) {
     
-    /*
-     * TODO: "In this paper we implicitly scale all covariance matrices by a 2π factor"
-     */
-    
-    RR::SetPrecision(precision);    
-    
     cout << "[*] Offline SampleD status: ";
+    
+    RR::SetPrecision(precision);
     
     RR factor;
     NTL::div(factor, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
     
-    mat_RR auxB, auxZ, inv_auxB;   
-    NTL::conv(auxB, B);
-    NTL::inv(inv_auxB, auxB);
-    NTL::mul(auxZ, (double)q, inv_auxB);
+    ZZ d;
+    mat_ZZ invB;
+    NTL::inv(d, invB, B, 0);
+    
+    mat_RR aux_invB;
+    conv(aux_invB, invB);
+    invB.kill();
+    
+    RR over_d;
+    NTL::div(over_d, to_RR(1), to_RR(d));
+    RR mult = to_RR(q)*over_d;
+    
+    mat_RR auxZ;   
+    NTL::mul(auxZ, aux_invB, mult);
+    aux_invB.kill();
     
     Z.SetDims(auxZ.NumRows(), auxZ.NumCols());
     for(int i = 0; i < Z.NumRows(); i++)
         for(int j = 0; j < Z.NumCols(); j++)
-            NTL::TruncToZZ(Z[i][j], auxZ[i][j]);
-    
-    auxB.kill();
+            NTL::TruncToZZ(Z[i][j], auxZ[i][j]);    
     auxZ.kill();
-    inv_auxB.kill();
-    
-    mat_ZZ transposeB, square;
-    mat_RR Sigma1, square_RR;
+        
     RR r_square;
     NTL::mul(r_square, r, r);    
-    NTL::transpose(transposeB, B);
+    
+    mat_ZZ transposeB, square;
+    mat_RR Sigma1, square_RR;    
+    NTL::transpose(transposeB, B);   
     NTL::mul(square, B, transposeB);
     transposeB.kill();
     NTL::conv(square_RR, square);
@@ -679,7 +684,7 @@ int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r
         for(int j = 0; j < Sigma2.NumCols(); j++) {
             NTL::mul(Sigma2[i][j], Sigma2[i][j], factor);
             NTL::sub(Sigma2[i][j], Sigma2[i][j], r_square);
-        }
+        }//end-for
     int outputCholesky = this->CholeskyDecomposition(B2, Sigma2, n); // Computes the decomposition of Sigma2 into B1.B1^t
     Sigma2.kill();
     
@@ -687,6 +692,7 @@ int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r
         return -1;
 
     cout << "Pass!" << endl;
+    
     return 0;
     
 }//end-OfflineSampleD()
@@ -763,39 +769,6 @@ vec_ZZ Samplers::SampleD(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c,
     return aux_x;
     
 }//end-SampleD()
-
-/* Computes the decomposition of A, a square matrix, into B*B^t and returns the lower-triangular matrix B */
-void Samplers::CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<double> >& A, int n) {
-    
-    /* Algorithm required in Peikert sampler */
-    
-    int i, j, k;
-    double s;
-    
-    B.SetLength(n);
-    
-    for(i = 0; i < n; i++) {
-        B[i].SetLength(n);
-        for(j = 0; j < n; j++)
-            B[i][j] = 0.0;
-    }//end-for
-        
-    for(i = 0; i < n; i++) {
-        for(j = 0; j <= i; j++) {
-            
-            s = 0.0;            
-            for(k = 0; k < j; k++)
-                s += B[i][k]*B[j][k];            
-            
-            if(i == j)
-                B[i][j] = sqrt(A[i][i] - s);                    
-            else
-                B[i][j] = 1.0/B[j][j]*(A[i][j] - s);
-            
-        }//end-for
-    }//end-for
-    
-}//end-CholeskyDecomposition()
 
 int Samplers::CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n) {
 

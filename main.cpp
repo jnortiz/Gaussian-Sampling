@@ -3,6 +3,7 @@
  * Author: jnortiz
  *
  * Created on March 10, 2015, 2:12 PM
+ * 
  */
 
 #include <cstdlib>
@@ -25,7 +26,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 2;
+    int parameter_set_id = 4;
     
     switch(parameter_set_id) {
         case 0: {
@@ -152,7 +153,7 @@ int main(void) {
     
     /* Computing parameters r and s of Peikert's offline phase */
     R = log(m*n)/log(2);
-    s = R*(to_RR(lambda)*normOfB + 1);    
+    s = R*(R*normOfB + 1);    
     NTL::mul(s, s, s);
 
     RR factor;

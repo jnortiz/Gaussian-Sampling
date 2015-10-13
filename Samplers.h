@@ -71,7 +71,6 @@ private:
     
     /* Procedure for T = BB^t used in Peikert algorithm - Lattice sampling */
     void SetCenter(vec_RR& c, const mat_ZZ& S);
-    void CholeskyDecomposition(Vec< Vec<double> >& B, const Vec< Vec<double> >& A, int n);    
     int CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n);    
         
     void Rot(Vec< Vec<ZZX> >& A, const Vec<ZZX>& a, int m, int n); // RotBasis()

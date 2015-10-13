@@ -1,0 +1,45 @@
+[*] IdealTrapGen status: Pass!
+[*] Setup status: Pass!
+[!] Setup running time: 0.00061222 s.
+
+[*] Offline SampleD status: 
+squareB: OK
+Sigma1: OK
+Sigma2: OK
+CholeskyDecomposition: OK
+Pass!
+[!] Offline phase of Peikert's algorithm running time: 0.00178535 s.
+[!] Refreshing phase of Peikert's algorithm running time: 0.636381 s.
+[!] SampleD running time: 0.0400618 s.
+[>] Sample from lattice: [0 1 1 -1 0 1 -1 0 1 0 -1 0 1 1 -1 -1 1 1 1 1 -1 -1 -1 -1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.637396 s.
+[!] SampleD running time: 0.0396706 s.
+[>] Sample from lattice: [-1 1 0 1 1 -1 1 1 1 0 -1 -1 0 1 1 0 -1 -1 1 1 1 -1 -1 1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.624498 s.
+[!] SampleD running time: 0.0397529 s.
+[>] Sample from lattice: [0 1 1 1 -1 0 -1 1 0 1 -1 1 -1 1 0 0 1 0 1 -1 0 0 1 0]
+[!] Refreshing phase of Peikert's algorithm running time: 0.62681 s.
+[!] SampleD running time: 0.0393091 s.
+[>] Sample from lattice: [0 0 1 1 1 -1 0 1 1 -1 0 1 1 1 1 0 1 1 1 -1 0 1 -1 -1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.627676 s.
+[!] SampleD running time: 0.0397389 s.
+[>] Sample from lattice: [1 1 1 0 1 1 0 -1 0 -1 1 1 1 0 0 0 -1 1 1 0 -1 1 1 -1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.625467 s.
+[!] SampleD running time: 0.0399438 s.
+[>] Sample from lattice: [-1 -1 -1 1 1 0 0 -1 0 0 0 -1 1 1 -1 1 -1 0 1 1 -1 1 -1 1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.629397 s.
+[!] SampleD running time: 0.0395354 s.
+[>] Sample from lattice: [-1 0 -1 1 1 0 -1 0 1 1 1 1 1 1 0 1 1 1 -1 -1 1 1 -1 1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.627746 s.
+[!] SampleD running time: 0.0399021 s.
+[>] Sample from lattice: [1 1 1 1 -1 -1 -1 0 -1 1 -1 0 -1 1 0 -1 1 -1 -1 -1 1 0 -1 0]
+[!] Refreshing phase of Peikert's algorithm running time: 0.632409 s.
+[!] SampleD running time: 0.0401116 s.
+[>] Sample from lattice: [-1 0 -1 0 -1 -1 1 -1 1 -1 -1 1 1 0 1 1 0 0 0 1 1 -1 -1 1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.636743 s.
+[!] SampleD running time: 0.0393838 s.
+[>] Sample from lattice: [1 1 -1 1 1 1 1 1 0 0 -1 0 1 -1 0 -1 0 -1 1 1 -1 1 0 0]
+
+Refreshing phase of Peikert's algorithm average running time: 0.630452 s.
+SampleD average running time: 0.039741 s.
+
