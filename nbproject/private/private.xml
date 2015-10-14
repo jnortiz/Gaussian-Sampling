@@ -2,16 +2,14 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <data xmlns="http://www.netbeans.org/ns/make-project-private/1">
         <activeConfTypeElem>1</activeConfTypeElem>
-        <activeConfIndexElem>0</activeConfIndexElem>
+        <activeConfIndexElem>1</activeConfIndexElem>
     </data>
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/home/jnortiz/git/PKE-PEKS/HIBE.cpp</file>
-            <file>file:/home/jnortiz/git/PKE-PEKS/HIBE.h</file>
-            <file>file:/home/jnortiz/git/PKE-PEKS/Samplers.cpp</file>
-            <file>file:/home/jnortiz/git/PKE-PEKS/Samplers.h</file>
-            <file>file:/home/jnortiz/git/PKE-PEKS/main.cpp</file>
+            <file>file:/home/jnortiz/git/Gaussian-Sampling/Samplers.h</file>
+            <file>file:/home/jnortiz/git/Gaussian-Sampling/Samplers.cpp</file>
+            <file>file:/home/jnortiz/git/Gaussian-Sampling/main.cpp</file>
         </group>
     </open-files>
 </project-private>

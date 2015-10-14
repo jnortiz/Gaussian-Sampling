@@ -80,7 +80,8 @@ int main(void) {
     RR sigmaRR = to_RR(3.195); // Standard deviation
     RR c = to_RR(0); // Center of the distribution            
     int tailcut = 13;
-    int precision = 107;
+    int security_level = 128;
+    long precision = security_level/2;
     int nRectangles = 63; // Parameter of Ziggurat algorithm
     int omega = precision; // Parameter of Ziggurat algorithm
     
@@ -92,22 +93,22 @@ int main(void) {
             averageZiggurat = 0.0;
             averageKnuthYao = 0.0;
             
-            int i, nIterations = 100000;
+            int i, nIterations = 1;
             
             Vec<int> ZigguratPoly, KnuthPoly;
-            int nSamples = 1; // #coefficients in the polynomial
+            int nSamples = 1024; // #coefficients in the polynomial
             
             for(i = 0; i < nIterations; i++) {
 
                 HIBE *hibe = new HIBE(q, m1, m2, k); // Parameters required only in Gaussian sampling from lattices  
                 
-//                cout << endl;
-//                
-//                ts_start = get_timestamp();            
-//                ZigguratPoly = hibe->GetSampler()->PolyGeneratorZiggurat(nSamples, nRectangles, sigmaRR, omega, precision, tailcut); // Coefficients, rectangles, sigma, omega and precision
-//                ts_end = get_timestamp();            
-//
-//                averageZiggurat += (ts_end - ts_start);
+                cout << endl;
+                
+                ts_start = get_timestamp();            
+                ZigguratPoly = hibe->GetSampler()->PolyGeneratorZiggurat(nSamples, nRectangles, sigmaRR, omega, precision, tailcut); // Coefficients, rectangles, sigma, omega and precision
+                ts_end = get_timestamp();            
+
+                averageZiggurat += (ts_end - ts_start);
                 
 //                cout << ZigguratPoly << endl;
 
