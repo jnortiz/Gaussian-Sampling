@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <NTL/ZZX.h>
 
+typedef unsigned long long timestamp_t;
+
 using namespace NTL;
 using namespace std;
 
@@ -632,6 +634,12 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
     
 }//end-GaussianSamplerFromLattice()
 
+static timestamp_t get_timestamp() {
+    struct timespec now;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+    return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
+}//end-get_timestamp()
+
 int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n, long precision) {
     
     cout << "[*] Offline SampleD status: ";
@@ -643,7 +651,13 @@ int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r
     
     ZZ d;
     mat_ZZ invB;
+    
+    timestamp_t ts_start, ts_end;
+    
+    ts_start = get_timestamp();
     NTL::inv(d, invB, B, 0);
+    ts_end = get_timestamp();            
+    cout << "[!] Inversion running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
     
     mat_RR aux_invB;
     conv(aux_invB, invB);
@@ -697,26 +711,28 @@ int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r
     
 }//end-OfflineSampleD()
 
-vec_ZZ Samplers::RefreshSampleD(const mat_RR& B2, RR r, int n) {
+vec_ZZ Samplers::RefreshSampleD(const mat_RR& B2, RR r, RR v, int n, long precision) {
+    
+    RR::SetPrecision(precision);
+    
+    RR std_deviation;
+    NTL::div(std_deviation, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
     
     vec_ZZ x2;
     x2.SetLength(n);
     
     vec_RR w;
     w.SetLength(n);
-    RR std_deviation;
-    NTL::div(std_deviation, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
-    RR v = this->ZCreatePartition(64, std_deviation, (long)(107), to_RR(13));
     
     for(int i = 0; i < w.length(); i++)
-        w[i] = this->Ziggurat(64, std_deviation, 107, v);
+        w[i] = this->Ziggurat(64, std_deviation, precision, v);
     
     vec_RR mult;
     NTL::mul(mult, w, B2);
     w.kill();
     
     for(int i = 0; i < n; i++) {
-        this->BuildProbabilityMatrix(107, 13, r, mult[i]); // Standard deviation r, centered in w[i]
+        this->BuildProbabilityMatrix(precision, 13, r, mult[i]); // Standard deviation r, centered in w[i]
         x2[i] = to_ZZ(this->KnuthYao(13, r, mult[i]));
     }//end-for
     mult.kill();
@@ -725,7 +741,9 @@ vec_ZZ Samplers::RefreshSampleD(const mat_RR& B2, RR r, int n) {
     
 }//end-RefreshSampleD()
 
-vec_ZZ Samplers::SampleD(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c, const vec_ZZ_p& x2, long q, RR r) {
+vec_ZZ Samplers::SampleD(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c, const vec_ZZ_p& x2, long q, RR r, long precision) {
+
+    RR::SetPrecision(precision);
     
     vec_ZZ_p subt, mult;
     NTL::sub(subt, c, x2);
@@ -745,7 +763,7 @@ vec_ZZ Samplers::SampleD(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c,
     vec_ZZ_p rounding;
     rounding.SetLength(center.length());        
     for(int i = 0; i < center.length(); i++) {
-        this->BuildProbabilityMatrix(107, 13, r, center[i]);
+        this->BuildProbabilityMatrix(precision, 13, r, center[i]);
         rounding[i] = to_ZZ_p((long)(this->KnuthYao(13, r, center[i])));
     }//end-for
     center.kill();
@@ -781,6 +799,7 @@ int Samplers::CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n) {
  * 
  */
 
+/*
     mat_RR transposeA;
     NTL::transpose(transposeA, A);
     
@@ -792,15 +811,18 @@ int Samplers::CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n) {
                 return -1;
             }//end-if
     transposeA.kill();
+*/
     
     int i, j, k;
-    RR subt, overB, mult, s;
+    RR subt, mult, s;
     
     B.SetDims(n, n);
     
-    for(i = 0; i < n; i++) {
+    for(i = 0; i < n; i++) {        
         for(j = 0; j <= i; j++) { 
+            
             s = to_RR(0);            
+            
             for(k = 0; k < j; k++) {
                 NTL::mul(mult, B[i][k], B[j][k]);
                 NTL::add(s, s, mult);
@@ -815,10 +837,9 @@ int Samplers::CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n) {
                     return -1;
                 }//end-if
                 B[i][j] = sqrt(subt);                
-            } else {
-                NTL::div(overB, to_RR(1), B[j][j]);
-                NTL::mul(B[i][j], overB, subt);
-            }//end-else
+            } else
+                NTL::div(B[i][j], subt, B[j][j]);
+            
         }//end-for
     }//end-for
     

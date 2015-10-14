@@ -30,10 +30,12 @@ public:
     /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c}*/
     vec_RR GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center);
     
+    RR ZCreatePartition(int m, RR sigma, long n, RR tail);
+    
     RR NormOfBasis(const mat_RR& B);
     int OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n, long precision);
-    vec_ZZ RefreshSampleD(const mat_RR& B2, RR r, int n);
-    vec_ZZ SampleD(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c, const vec_ZZ_p& x2, long q, RR r);
+    vec_ZZ RefreshSampleD(const mat_RR& B2, RR r, RR v, int n, long precision);
+    vec_ZZ SampleD(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c, const vec_ZZ_p& x2, long q, RR r, long precision);
     
     void RotBasis(mat_ZZ& T, const Vec< Vec<ZZX> >& S, int n);
     
@@ -56,7 +58,6 @@ private:
     
     /* Sampling from a continuous Gaussian distribution */
     RR Ziggurat(int m, RR sigma, long precision, RR v);
-    RR ZCreatePartition(int m, RR sigma, long n, RR tail);
     RR ZRecursion(Vec<RR>& X, int m, RR r, RR sigma, RR& v);
     RR NewMarsagliaTailMethod(RR r);
         

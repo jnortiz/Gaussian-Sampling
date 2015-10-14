@@ -112,12 +112,14 @@ int main(void) {
     
     timestamp_t avgSetup = 0.0, avgRefreshing = 0.0, avgSampleD = 0.0;            
 
-    int nIterations, tailcut;
+    int nIterations, security_level, tailcut;
     long precision;
 
-    nIterations = 1;
-    precision = 107;
+    security_level = 128;    
+    /* (Saarinen, 2015) argues that half of the desired security level is almost always sufficient. */
+    precision = security_level/2; 
     tailcut = 13;
+    nIterations = 1;
 
     /* Basis generation phase - (Mochetti, and Dahab, 2014) and (Stehlé et al., 2009) */
     for(int it = 0; it < nIterations; it++) {
@@ -176,6 +178,8 @@ int main(void) {
     
     cout << "[!] Offline phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
     
+    RR v = hibe->GetSampler()->ZCreatePartition(64, factor, precision, to_RR(tailcut));
+    
     nIterations = 10;
     if(outputOfflineSampleD == 0) {        
         
@@ -187,7 +191,7 @@ int main(void) {
             
             // Getting a fresh vector x2
             ts_start = get_timestamp();        
-            x2 = hibe->GetSampler()->RefreshSampleD(B2, R, m*n);
+            x2 = hibe->GetSampler()->RefreshSampleD(B2, R, v, m*n, precision);
             ts_end = get_timestamp();    
             
             cout << "[!] Refreshing phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -202,7 +206,7 @@ int main(void) {
             
             /* Getting a sample from the lattice using the Peikert's algorithm */
             ts_start = get_timestamp();    
-            sample = hibe->GetSampler()->SampleD(S_p, Z_p, c_p, x2_p, (long)q, R);
+            sample = hibe->GetSampler()->SampleD(S_p, Z_p, c_p, x2_p, (long)q, R, precision);
             ts_end = get_timestamp();    
 
             avgSampleD += (ts_end - ts_start);
