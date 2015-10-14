@@ -93,7 +93,7 @@ int main(void) {
             averageZiggurat = 0.0;
             averageKnuthYao = 0.0;
             
-            int i, nIterations = 1;
+            int i, nIterations = 1000;
             
             Vec<int> ZigguratPoly, KnuthPoly;
             int nSamples = 1024; // #coefficients in the polynomial
@@ -110,7 +110,7 @@ int main(void) {
 
                 averageZiggurat += (ts_end - ts_start);
                 
-//                cout << ZigguratPoly << endl;
+                cout << ZigguratPoly << endl;
 
                 ts_start = get_timestamp();                        
                 KnuthPoly = hibe->GetSampler()->PolyGeneratorKnuthYao(nSamples, precision, tailcut, sigmaRR, c); // Coefficients, precision, tailcut, and sigma
@@ -118,7 +118,7 @@ int main(void) {
 
                 averageKnuthYao += (ts_end - ts_start);
                 
-//                cout << KnuthPoly << endl;
+                cout << KnuthPoly << endl;
 
                 delete(hibe);
             
