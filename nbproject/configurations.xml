@@ -69,7 +69,6 @@
         </cTool>
         <ccTool>
           <developmentMode>5</developmentMode>
-          <commandLine>-I$HOME/sw/include</commandLine>
         </ccTool>
         <fortranCompilerTool>
           <developmentMode>5</developmentMode>
@@ -78,7 +77,7 @@
           <developmentMode>5</developmentMode>
         </asmTool>
         <linkerTool>
-          <commandLine>-L$HOME/sw/lib -lntl -lgmp -lm</commandLine>
+          <commandLine>-lntl -lgmp -lm</commandLine>
         </linkerTool>
       </compileType>
       <item path="HIBE.cpp" ex="false" tool="1" flavor2="0">

@@ -44,8 +44,8 @@ OBJECTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=-I$HOME/sw/include
-CXXFLAGS=-I$HOME/sw/include
+CCFLAGS=
+CXXFLAGS=
 
 # Fortran Compiler Flags
 FFLAGS=
@@ -62,7 +62,7 @@ LDLIBSOPTIONS=
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/gaussian-sampling: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/gaussian-sampling ${OBJECTFILES} ${LDLIBSOPTIONS} -L$HOME/sw/lib -lntl -lgmp -lm
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/gaussian-sampling ${OBJECTFILES} ${LDLIBSOPTIONS} -lntl -lgmp -lm
 
 ${OBJECTDIR}/HIBE.o: HIBE.cpp 
 	${MKDIR} -p ${OBJECTDIR}

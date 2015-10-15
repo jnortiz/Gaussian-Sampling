@@ -22,6 +22,12 @@ typedef unsigned long long timestamp_t;
 using namespace NTL;
 using namespace std;
 
+static timestamp_t get_timestamp() {
+    struct timespec now;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+    return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
+}//end-get_timestamp()
+
 Samplers::Samplers(int q, const ZZ_pX& f) {
      
     int randint;
@@ -425,7 +431,7 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     
     RR::SetPrecision(precision);
     
-    cout << "\n[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
+    cout << "[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
     cout << "[*] Gram-Schmidt process status: ";
     
     mat_RR mu;
@@ -634,13 +640,84 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
     
 }//end-GaussianSamplerFromLattice()
 
-static timestamp_t get_timestamp() {
-    struct timespec now;
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
-    return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
-}//end-get_timestamp()
+int IsZero(int x) {
+    unsigned zero;
+    zero = x;
+    zero = 1 ^ ((zero | -zero) >> 31) & 1;
+    return zero;    
+}//end-isZero()
 
-int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n, long precision) {
+unsigned lessThan(int x, int y) {    
+    unsigned less;    
+    less = x-y;
+    less >>= sizeof(int)*8-1;    
+    return less;        
+}//end-lessThan()
+
+vec_RR Samplers::Klein(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, long precision, int tailcut, const vec_RR center) {
+
+    cout << "\n[*] Klein's sampler status: ";
+    
+    RR::SetPrecision(precision);    
+
+    double sizeof_RR = pow(2.0, sizeof(RR));
+    RR aux_B, c_prime, innerp, innerp1, sigma_prime, Z;
+    vec_RR c, v;    
+    int cols, i, j, rows;
+    
+    cols = BTilde.NumCols();
+    rows = BTilde.NumRows();
+    
+    c.SetLength(cols);
+    v.SetLength(cols);
+                   
+    clear(v);
+    c = center;
+    
+//    unsigned isZero, lessThan;
+//    RR aux_Z, newSigma;
+    
+    for(i = rows-1; i >= 0; i--) {
+        
+        NTL::InnerProduct(innerp1, c, BTilde[i]);        
+        NTL::InnerProduct(innerp, BTilde[i], BTilde[i]);
+        div(c_prime, innerp1, innerp);        
+        div(sigma_prime, sigma, sqrt(innerp));
+        
+//        isZero = IsZero(to_int(to_ZZ(floor(sigma_prime))));
+//        lessThan = lessThan(sizeof_RR, sigma_prime);
+//        
+//        NTL::mul(newSigma, to_RR(2), sigma);
+//        this->BuildProbabilityMatrix(precision, tailcut, sigma_prime, c_prime);                     
+//        aux_Z = to_RR(this->KnuthYao(tailcut, sigma_prime, c_prime));                    
+//        
+//        sigma_prime = Select(sigma_prime, newSigma, lessThan);
+//        Z = Select(c_prime, aux_Z, isZero);
+        
+        if(NTL::floor(sigma_prime) == 0)
+            Z = c_prime;
+        else {
+            if(sigma_prime > sizeof_RR)
+                NTL::mul(sigma_prime, to_RR(2), sigma);
+            this->BuildProbabilityMatrix(precision, tailcut, sigma_prime, c_prime);                     
+            Z = to_RR(this->KnuthYao(tailcut, sigma_prime, c_prime));            
+        }//end-else
+                
+        for(j = 0; j < B.NumCols(); j++) {
+            aux_B = to_RR(B[i][j]);
+            v[j] = v[j] + aux_B*Z;
+            c[j] = c[j] - aux_B*Z;
+        }//end-for
+        
+    }//end-for
+    
+    cout << "Pass!" << endl;
+    
+    return v;
+    
+}//end-Klein()
+
+int Samplers::OfflinePeikert(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r, const mat_RR& Sigma, int n, long precision) {
     
     cout << "[*] Offline SampleD status: ";
     
@@ -711,7 +788,7 @@ int Samplers::OfflineSampleD(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r
     
 }//end-OfflineSampleD()
 
-vec_ZZ Samplers::RefreshSampleD(const mat_RR& B2, RR r, RR v, int n, long precision) {
+vec_ZZ Samplers::RefreshPeikert(const mat_RR& B2, RR r, RR v, int n, long precision) {
     
     RR::SetPrecision(precision);
     
@@ -741,7 +818,7 @@ vec_ZZ Samplers::RefreshSampleD(const mat_RR& B2, RR r, RR v, int n, long precis
     
 }//end-RefreshSampleD()
 
-vec_ZZ Samplers::SampleD(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c, const vec_ZZ_p& x2, long q, RR r, long precision) {
+vec_ZZ Samplers::Peikert(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c, const vec_ZZ_p& x2, long q, RR r, long precision) {
 
     RR::SetPrecision(precision);
     
