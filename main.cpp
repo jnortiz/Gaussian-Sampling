@@ -26,7 +26,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 4;
+    int parameter_set_id = 2;
     
     switch(parameter_set_id) {
         case 0: {
@@ -154,7 +154,7 @@ int main(void) {
     /* Getting the [norm of the] Gram-Schmidt orthogonalization of S */
     mat_RR BTilde;
     ts_start = get_timestamp();
-    //BTilde_norm = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, precision);
+    BTilde_norm = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, precision);
     ts_end = get_timestamp();    
     B.kill();
     
@@ -169,7 +169,7 @@ int main(void) {
     RR sigmaRR = log(length)*BTilde_norm;
     vec_RR sample;
     
-    nIterations = 0;    
+    nIterations = 10;
     for(int it = 0; it < nIterations; it++) {
 
         ts_start = get_timestamp();    

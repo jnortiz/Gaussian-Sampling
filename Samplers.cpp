@@ -727,14 +727,8 @@ int Samplers::OfflinePeikert(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r
     NTL::div(factor, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
     
     ZZ d;
-    mat_ZZ invB;
-    
-    timestamp_t ts_start, ts_end;
-    
-    ts_start = get_timestamp();
+    mat_ZZ invB;    
     NTL::inv(d, invB, B, 0);
-    ts_end = get_timestamp();            
-    cout << "[!] Inversion running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
     
     mat_RR aux_invB;
     conv(aux_invB, invB);
