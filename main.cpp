@@ -26,7 +26,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 2;
+    int parameter_set_id = 4;
     
     switch(parameter_set_id) {
         case 0: {

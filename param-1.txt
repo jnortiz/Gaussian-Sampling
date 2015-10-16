@@ -1,4 +1,0 @@
-[*] IdealTrapGen status: Pass!
-[*] Setup status: Pass!
-[!] Setup running time: 0.599025 s.
-
