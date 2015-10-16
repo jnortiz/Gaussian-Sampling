@@ -26,7 +26,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 2;
+    int parameter_set_id = 4;
     
     switch(parameter_set_id) {
         case 0: {
@@ -141,6 +141,7 @@ int main(void) {
     
     int m = hibe->GetM();
     int n = hibe->GetN();
+    int length = m*n;
     
     /* Short basis expansion using the Rot_f operator */
     hibe->GetSampler()->RotBasis(S, hibe->GetMsk(), hibe->GetN());
@@ -153,7 +154,7 @@ int main(void) {
     /* Getting the [norm of the] Gram-Schmidt orthogonalization of S */
     mat_RR BTilde;
     ts_start = get_timestamp();
-    BTilde_norm = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, precision);
+    //BTilde_norm = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, precision);
     ts_end = get_timestamp();    
     B.kill();
     
@@ -161,14 +162,14 @@ int main(void) {
     cout << "[!] Norm of the orthogonal basis: " << BTilde_norm << endl;
     
     vec_RR center;
-    center.SetLength(m*n);
-    for(int i = 0; i < m*n; i++)
+    center.SetLength(length);
+    for(int i = 0; i < length; i++)
         center[i] = to_RR(NTL::RandomBnd(q));
     
-    RR sigmaRR = log(m*n)*BTilde_norm;
+    RR sigmaRR = log(length)*BTilde_norm;
     vec_RR sample;
     
-    nIterations = 10;    
+    nIterations = 0;    
     for(int it = 0; it < nIterations; it++) {
 
         ts_start = get_timestamp();    
@@ -202,7 +203,7 @@ int main(void) {
     }//end-if    
     
     /* Computing parameters r and s of Peikert's offline phase */
-    R = log(m*n)/log(2);
+    R = log(length)/log(2);
     s = R*(R*normOfB + 1);    
     NTL::mul(s, s, s);
 
@@ -210,7 +211,7 @@ int main(void) {
     NTL::div(factor, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
     
     mat_RR Sigma;
-    Sigma.SetDims(m*n, m*n);
+    Sigma.SetDims(length, length);
     for(int i = 0; i < Sigma.NumRows(); i++)
         NTL::mul(Sigma[i][i], s, factor);
             
@@ -224,7 +225,6 @@ int main(void) {
     mat_ZZ_p Z_p;
     NTL::conv(Z_p, Z);
     Z.kill();
-    S.kill();    
     Sigma.kill();
     
     cout << "[!] Offline phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -234,13 +234,14 @@ int main(void) {
     mat_ZZ_p S_p;
     vec_ZZ x2;
     NTL::conv(S_p, S);    
+    S.kill();    
     
     nIterations = 10;
     if(outputOfflinePeikert == 0) {        
         
         vec_ZZ_p c_p, x2_p;
         vec_ZZ center, sample;    
-        center.SetLength(S_p.NumRows());
+        center.SetLength(length);
         
         for(int it = 0; it < nIterations; it++) {
             

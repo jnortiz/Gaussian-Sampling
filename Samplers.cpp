@@ -820,10 +820,11 @@ vec_ZZ Samplers::RefreshPeikert(const mat_RR& B2, RR r, RR v, int n, long precis
 
 vec_ZZ Samplers::Peikert(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c, const vec_ZZ_p& x2, long q, RR r, long precision) {
 
+    
     RR::SetPrecision(precision);
     
     vec_ZZ_p subt, mult;
-    NTL::sub(subt, c, x2);
+    NTL::sub(subt, c, x2);    
     NTL::mul(mult, Z, subt);
     subt.kill();
     

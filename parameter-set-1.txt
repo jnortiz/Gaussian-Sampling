@@ -1,0 +1,27 @@
+[*] IdealTrapGen status: Pass!
+[*] Setup status: Pass!
+[!] Setup running time: 0.000933255 s.
+
+[*] Offline SampleD status: Pass!
+[!] Offline phase of Peikert's algorithm running time: 0.0030051 s.
+[!] Refreshing phase of Peikert's algorithm running time: 0.783038 s.
+[!] SampleD running time: 0.0549755 s.
+[>] Sample from lattice: [-1 0 1 0 1 -1 1 0 0 -1 1 -1 -1 1 1 -1 1 1 1 -1 -1 1 -1 0]
+[!] Refreshing phase of Peikert's algorithm running time: 0.797835 s.
+[!] SampleD running time: 0.0537063 s.
+[>] Sample from lattice: [-1 1 0 -1 -1 -1 -1 1 0 -1 0 -1 0 1 0 0 1 1 -1 0 0 0 1 -1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.777498 s.
+[!] SampleD running time: 0.0527186 s.
+[>] Sample from lattice: [-1 0 -1 0 1 0 1 1 1 -1 -1 1 -1 1 1 -1 -1 0 0 0 -1 1 1 -1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.763979 s.
+[!] SampleD running time: 0.0544186 s.
+[>] Sample from lattice: [0 0 1 -1 1 0 0 1 1 1 1 0 0 0 1 -1 1 -1 0 -1 0 -1 1 -1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.785446 s.
+[!] SampleD running time: 0.0526152 s.
+[>] Sample from lattice: [0 1 -1 1 0 0 1 -1 -1 1 -1 -1 -1 -1 1 -1 1 -1 1 1 -1 1 1 -1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.769044 s.
+[!] SampleD running time: 0.0533316 s.
+[>] Sample from lattice: [1 1 -1 0 1 0 0 0 1 1 1 1 -1 -1 -1 0 1 0 -1 -1 1 -1 1 1]
+[!] Refreshing phase of Peikert's algorithm running time: 0.781564 s.
+[!] SampleD running time: 0.0530885 s.
+[>] Sample from lattice: [-1 -1 -1 -1 0 0 0 -1 1 1 1 1 -1 1 -1 0 1 1 1 -1 0 1 0 0]
