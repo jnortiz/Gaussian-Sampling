@@ -431,7 +431,7 @@ RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precis
     
     RR::SetPrecision(precision);
     
-    cout << "[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
+    cout << "\n[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
     cout << "[*] Gram-Schmidt process status: ";
     
     mat_RR mu;
@@ -924,41 +924,177 @@ int Samplers::CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n) {
     
 }//end-CholeskyDecomposition()
 
-void Samplers::PrepareToSampleCGS(const vec_RR& B1, const mat_RR& BTilde) {
+vec_RR Samplers::CompactGaussianSampler(const mat_RR& B, const vec_RR center, const vec_RR& BTildeN, const vec_RR& Vn, const vec_RR& H, const vec_RR& I, const vec_RR& D, RR sigma, long precision) {
+
+    cout << "\n[*] Compact-Gaussian-Sampler status: ";
     
-    int cols, rows;
+    RR::SetPrecision(precision);
     
+    vec_RR aux_b, b, c, mult, mult1, sample, sum, v;
+    RR ci, innerp, sigmai;
+    double z;
+    int cols, i, rows;
+    
+    cols = B.NumCols();
+    rows = B.NumRows();
+    
+    mult.SetLength(cols);
+    mult1.SetLength(cols);
+    
+    c = center;
+    b = BTildeN;
+    v = Vn;
+    
+    for(i = (rows-1); i > 0; i--) {
+        
+        NTL::InnerProduct(innerp, c, b);
+        NTL::div(ci, innerp, D[i]);
+        NTL::div(sigmai, sigma, NTL::sqrt(D[i]));
+        this->BuildProbabilityMatrix(precision, 13, sigmai, ci);
+        z = (double)(this->KnuthYao(13, sigmai, ci));
+        
+        NTL::mul(mult, B[i], (double)z);
+        NTL::sub(c, c, mult);
+        
+        NTL::mul(mult, v, I[i-1]);
+        NTL::mul(mult1, b, H[i-1]);
+        NTL::add(sum, mult1, mult); 
+        aux_b = b;
+        b = this->InvIsometry(sum);        
+
+        NTL::mul(mult, v, H[i-1]);
+        NTL::mul(mult1, aux_b, I[i-1]);
+        NTL::add(v, mult1, mult);                
+        
+    }//end-for
+    
+    aux_b.kill();
+    mult1.kill();
+    sum.kill();
+    v.kill();
+
+    NTL::InnerProduct(innerp, c, b);
+    NTL::div(ci, innerp, D[i]);
+    NTL::div(sigmai, sigma, NTL::sqrt(D[i]));
+    this->BuildProbabilityMatrix(precision, 13, sigmai, ci);
+    z = (double)(this->KnuthYao(13, sigmai, ci));
+
+    NTL::mul(mult, B[i], (double)z);
+    NTL::sub(c, c, mult);    
+    
+    b.kill();
+    mult.kill();
+    
+    NTL::sub(sample, center, c);
+    c.kill();
+    
+    cout << "Pass!" << endl;
+    
+    return sample;    
+    
+}//end-CompactGaussianSampler()
+
+void Samplers::PrepareToSampleCGS(vec_RR& v, vec_RR& H, vec_RR& I, const mat_RR& BTilde, const vec_RR& D, const vec_RR& B1, long precision) {
+    
+    /**
+     * 
+     * @param v
+     * @param H
+     * @param I
+     * @param BTilde - The orthogonal basis of B
+     * @param D - It contains the squared norm of each vector in the orthogonal basis ~B
+     * @param B1 - The first vector in the short basis
+     * 
+     */
+    
+    cout << "\n[*] PrepareToSampleCGS status: ";
+    
+    RR::SetPrecision(precision);    
+        
+    vec_RR isometry, aux_v, mult;
+    RR C, di;
+    int cols, i, rows;
+
     cols = BTilde.NumCols();
     rows = BTilde.NumRows();
     
-    mat_RR v;
-    vec_RR C, D, H, I, mult;
-    RR di;
-    int i;
-    
-    v.SetDims(rows, cols);
-    C.SetLength(rows-1); // From 1 to (n-1)
-    D.SetLength(rows);
-    H.SetLength(rows-1); // From 1 to (n-1)
-    I.SetLength(rows-1); // From 1 to (n-1)
-    
-    
-    NTL::InnerProduct(D[0], BTilde[0], BTilde[0]);
-    for(i = 1; i < rows; i++) {
-        NTL::InnerProduct(D[i], BTilde[i], BTilde[i]);
-        div(H[i-1], D[i-1], D[i]);        
-    }//end-for
-    
-    v[0] = B1;
+    H.SetLength(rows-1);
+    I.SetLength(rows-1);    
+    isometry.SetLength(cols);
+    aux_v.SetLength(cols);
+
+    aux_v = B1;
     for(i = 0; i < (rows-1); i++) {
-        NTL::InnerProduct(C[i], v[i], this->Isometry(BTilde[i]));
-        div(I[i], C[i], D[i+1]);
-        div(di, C[i], D[i]);
-        mul(mult, this->Isometry(BTilde[i]), di);
-        sub(v[i+1], v[i], mult);
+        isometry = this->Isometry(BTilde[i]);
+        NTL::InnerProduct(C, aux_v, isometry);
+        div(H[i], D[i], D[i+1]);        
+        div(I[i], C, D[i+1]);
+        div(di, C, D[i]);
+        mul(mult, isometry, di);
+        sub(aux_v, aux_v, mult);
     }//end-for    
     
+    v = aux_v;
+    aux_v.kill();
+    isometry.kill();
+    mult.kill();
+    
+    cout << "Pass!" << endl;
+            
 }//end-PrepareToSampleCGS()
+
+RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, vec_RR& D, const mat_RR& T_A, long precision) {
+    
+    cout << "[*] Gram-Schmidt process status: ";
+    
+    RR::SetPrecision(precision);    
+    
+    vec_RR mult, sum;
+    RR innerp, mu, norm;
+    int cols, rows;
+    
+    cols = T_A.NumCols();
+    rows = T_A.NumRows();
+    
+    T_ATilde.SetDims(rows, cols);
+    D.SetLength(rows);
+    mult.SetLength(cols);
+    sum.SetLength(cols);
+    
+    T_ATilde[0] = T_A[0];
+
+    for(int i = 1; i < rows; i++) {        
+        
+        clear(sum);
+        
+        for(int j = 0; j < (i-1); j++) {
+            NTL::InnerProduct(innerp, T_A[i], T_ATilde[j]);
+            div(mu, innerp, D[j]);
+            mul(mult, T_ATilde[j], mu);
+            add(sum, sum, mult);
+        }//end-for
+
+        NTL::InnerProduct(innerp, T_A[i], T_ATilde[i-1]);
+        NTL::InnerProduct(D[i-1], T_ATilde[i-1], T_ATilde[i-1]);
+        div(mu, innerp, D[i-1]);
+        mul(mult, T_ATilde[i-1], mu);
+        add(sum, sum, mult);
+        
+        sub(T_ATilde[i], T_A[i], sum);
+        
+    }//end-for
+    
+    NTL::InnerProduct(D[rows-1], T_ATilde[rows-1], T_ATilde[rows-1]);    
+    norm = this->NormOfBasis(T_ATilde);
+    
+    mult.kill();
+    sum.kill();
+    
+    cout << "Pass!" << endl;
+    
+    return norm;
+    
+}//end-GramSchmidtProcess() 
 
 /* Expansion of matrix T_A, which was generated by IdealTrapGen, into the integer basis S */
 void Samplers::RotBasis(mat_ZZ& T, const Vec< Vec<ZZX> >& S, int n) {
@@ -1076,6 +1212,21 @@ vec_RR Samplers::Isometry(const vec_RR& b) {
     
 }//end-Isometry()
 
+vec_RR Samplers::InvIsometry(const vec_RR& b) {
+    
+    int n = b.length();    
+    vec_RR out;    
+    out.SetLength(n);
+    
+        
+    out[n-1] = -b[0];    
+    for(int i = 1; i < n; i++)
+        out[i-1] = b[i];
+    
+    return out;
+    
+}//end-InvIsometry()
+
 void Samplers::SetCenter(vec_RR& c, const mat_ZZ& S) {
     
     int cols, rows;    
@@ -1102,7 +1253,7 @@ RR Samplers::NormOfBasis(const mat_RR& B) {
     
     for(int i = 0; i < B.NumRows(); i++) {
         NTL::InnerProduct(innerp, B[i], B[i]);
-        norm = sqrt(innerp); // Norm
+        norm = sqrt(innerp);
         if(norm > normB)
             normB = norm;
     }//end-for

@@ -24,8 +24,12 @@ public:
     Samplers(int q, const ZZ_pX& f);
     virtual ~Samplers();
         
+    vec_RR CompactGaussianSampler(const mat_RR& B, const vec_RR center, const vec_RR& BTildeN, const vec_RR& Vn, const vec_RR& H, const vec_RR& I, const vec_RR& D, RR sigma, long precision);
+    void PrepareToSampleCGS(vec_RR& v, vec_RR& H, vec_RR& I, const mat_RR& BTilde, const vec_RR& D, const vec_RR& B1, long precision);
+    
     /* Generic algorithm for GSO basis construction */
     RR GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precision);
+    RR GramSchmidtProcess(mat_RR& T_ATilde, vec_RR& D, const mat_RR& T_A, long precision);
     
     /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c}*/
     vec_RR GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, const vec_RR center);
@@ -71,8 +75,6 @@ private:
     
     /* Sampling from a discrete Gaussian distribution over lattices */
     ZZX GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n);
-    vec_RR CompactGaussianSampler(const Vec< Vec<int> >& B, RR sigma, const vec_RR center, const vec_RR& BTilden, const vec_RR& Vn, const vec_RR& H, const vec_RR& I);    
-    void PrepareToSampleCGS(const vec_RR& B1, const mat_RR& BTilde);
     
     /* Procedure for T = BB^t used in Peikert algorithm - Lattice sampling */
     void SetCenter(vec_RR& c, const mat_ZZ& S);
@@ -84,6 +86,7 @@ private:
     
     void rot(mat_RR& out, const vec_RR& b, int n); // BlockGSO() and FasterIsometricGSO()
     vec_RR Isometry(const vec_RR& b);
+    vec_RR InvIsometry(const vec_RR& b);
     
     RR Norm(const vec_RR& b, int n);
     

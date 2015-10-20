@@ -26,7 +26,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 2;
+    int parameter_set_id = 3;
     
     switch(parameter_set_id) {
         case 0: {
@@ -149,145 +149,219 @@ int main(void) {
     mat_RR B;
     NTL::conv(B, S);    
     normOfB = hibe->GetSampler()->NormOfBasis(B);
+    
+    int procedure_id = 0;
+    
+    switch(procedure_id) {
         
-    /* Getting the [norm of the] Gram-Schmidt orthogonalization of S */
-    mat_RR BTilde;
-    ts_start = get_timestamp();
-    BTilde_norm = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, precision);
-    ts_end = get_timestamp();    
-    B.kill();
-    
-    cout << "[!] GramSchmidt Process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
-    cout << "[!] Norm of the orthogonal basis: " << BTilde_norm << endl;
-    
-    vec_RR center;
-    center.SetLength(m*n);
-    for(int i = 0; i < m*n; i++)
-        center[i] = to_RR(NTL::RandomBnd(q));
-    
-    RR sigmaRR = log(m*n)*BTilde_norm;
-    vec_RR sample;
-    
-    nIterations = 10;    
-    for(int it = 0; it < nIterations; it++) {
-
-        ts_start = get_timestamp();    
-        sample = hibe->GetSampler()->Klein(S, BTilde, sigmaRR, precision, tailcut, center);
-        ts_end = get_timestamp();
-
-        avgKlein += (ts_end - ts_start);
-
-        cout << "[!] Klein's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
-        cout << "[>] Sample from the lattice: " << sample << endl;
-
-        ts_start = get_timestamp();    
-        sample = hibe->GetSampler()->GaussianSamplerFromLattice(S, BTilde, sigmaRR, precision, tailcut, center);
-        ts_end = get_timestamp();
-
-        avgUsual += (ts_end - ts_start);
-        
-        cout << "[!] Usual Gaussian sampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
-        cout << "[>] Sample from the lattice: " << sample << endl;
-
-    }//end-for
-    
-    BTilde.kill();
-    center.kill();
-    sample.kill();
-    
-    cout << endl;
-    if(nIterations > 1) {
-        cout << "[!] Klein's average running time: " << (float)(avgKlein/((float)(nIterations)*1000000000.0)) << " s." << endl;
-        cout << "[!] Usual Gaussian sampler average running time: " << (float)(avgUsual/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
-    }//end-if    
-    
-    /* Computing parameters r and s of Peikert's offline phase */
-    R = log(m*n)/log(2);
-    s = R*(R*normOfB + 1);    
-    NTL::mul(s, s, s);
-
-    RR factor;
-    NTL::div(factor, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
-    
-    mat_RR Sigma;
-    Sigma.SetDims(m*n, m*n);
-    for(int i = 0; i < Sigma.NumRows(); i++)
-        NTL::mul(Sigma[i][i], s, factor);
+        case 0: {
             
-    /* Computing the Peikert's algorithm offline phase */
-    mat_RR B2;
-    mat_ZZ Z;
-    ts_start = get_timestamp();    
-    int outputOfflinePeikert = hibe->GetSampler()->OfflinePeikert(Z, B2, S, q, R, Sigma, m*n, precision);    
-    ts_end = get_timestamp();
-    
-    mat_ZZ_p Z_p;
-    NTL::conv(Z_p, Z);
-    Z.kill();
-    S.kill();    
-    Sigma.kill();
-    
-    cout << "[!] Offline phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
-    
-    RR v = hibe->GetSampler()->ZCreatePartition(64, factor, precision, to_RR(tailcut));
-    
-    mat_ZZ_p S_p;
-    vec_ZZ x2;
-    NTL::conv(S_p, S);    
-    
-    nIterations = 10;
-    if(outputOfflinePeikert == 0) {        
-        
-        vec_ZZ_p c_p, x2_p;
-        vec_ZZ center, sample;    
-        center.SetLength(S_p.NumRows());
-        
-        for(int it = 0; it < nIterations; it++) {
+            /*
+             * Compact Gaussian sampler of (Lyubashevsky and Prest, 2015)
+             */
             
-            // Getting a fresh vector x2
-            ts_start = get_timestamp();        
-            x2 = hibe->GetSampler()->RefreshPeikert(B2, R, v, m*n, precision);
-            ts_end = get_timestamp();    
-            
-            cout << "[!] Refreshing phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
-
-            avgRefreshing += (ts_end - ts_start);
-            
-            for(int i = 0; i < center.length(); i++)
-                center[i] = RandomBnd(q);    
-
-            NTL::conv(c_p, center);
-            NTL::conv(x2_p, x2);
-            
-            /* Getting a sample from the lattice using the Peikert's algorithm */
+            mat_RR OrthoBasis;
+            vec_RR D;
+                            
             ts_start = get_timestamp();    
-            sample = hibe->GetSampler()->Peikert(S_p, Z_p, c_p, x2_p, (long)q, R, precision);
+            BTilde_norm = hibe->GetSampler()->GramSchmidtProcess(OrthoBasis, D, B, precision);
+            ts_end = get_timestamp();
+
+            cout << "[!] Gram-Schmidt process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+
+            vec_RR H, I, v;            
+            ts_start = get_timestamp();    
+            hibe->GetSampler()->PrepareToSampleCGS(v, H, I, OrthoBasis, D, B[0], precision);
+            ts_end = get_timestamp();
+
+            cout << "[!] PrepareToSampleCGS running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+
+            vec_RR Bn, center, sample;
+            Bn = OrthoBasis[OrthoBasis.NumRows()-1];                        
+            OrthoBasis.kill();
+            
+            center.SetLength(m*n);
+            for(int i = 0; i < center.length(); i++)
+                center[i] = to_RR(0);                
+            
+            RR sigma = log(m*n)*BTilde_norm;
+
+            ts_start = get_timestamp();    
+            sample = hibe->GetSampler()->CompactGaussianSampler(B, center, Bn, v, H, I, D, sigma, precision);
+            ts_end = get_timestamp();
+
+            cout << "[!] Compact-Gaussian-Sampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+            cout << "\n[>] Sample from the lattice: " << sample << endl;
+
+            B.kill();
+            S.kill();
+            center.kill();
+            v.kill();
+            H.kill();
+            I.kill();
+            D.kill();
+            Bn.kill();
+            
+            break;
+        }//end-case-0
+        
+        case 1: {
+            
+            /*
+             * Klein's and Peikert's Gaussian samplers
+             */
+            
+            /* Getting the [norm of the] Gram-Schmidt orthogonalization of S */
+            mat_RR BTilde;
+            ts_start = get_timestamp();
+            BTilde_norm = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, precision);
             ts_end = get_timestamp();    
+            B.kill();
 
-            avgPeikert += (ts_end - ts_start);
-            
-            cout << "[!] Peikert running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
-            cout << "[>] Sample from the lattice: " << sample << endl;
-            
-        }//end-for
+            cout << "[!] GramSchmidt Process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+            cout << "[!] Norm of the orthogonal basis: " << BTilde_norm << endl;
 
-        cout << endl;
-        if(nIterations > 1) {
-            cout << "Refreshing phase of Peikert's algorithm average running time: " << (float)(avgRefreshing/((float)(nIterations)*1000000000.0)) << " s." << endl;
-            cout << "Peikert average running time: " << (float)(avgPeikert/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
-        }//end-if
+            cout << BTilde << endl;
+            
+            return 0;
+            
+            vec_RR center;
+            center.SetLength(m*n);
+            for(int i = 0; i < m*n; i++)
+                center[i] = to_RR(NTL::RandomBnd(q));
+
+            RR sigmaRR = log(m*n)*BTilde_norm;
+            vec_RR sample;
+
+            nIterations = 1;    
+            for(int it = 0; it < nIterations; it++) {
+
+                ts_start = get_timestamp();    
+                sample = hibe->GetSampler()->Klein(S, BTilde, sigmaRR, precision, tailcut, center);
+                ts_end = get_timestamp();
+
+                avgKlein += (ts_end - ts_start);
+
+                cout << "[!] Klein's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+                cout << "[>] Sample from the lattice: " << sample << endl;
+
+                ts_start = get_timestamp();    
+                sample = hibe->GetSampler()->GaussianSamplerFromLattice(S, BTilde, sigmaRR, precision, tailcut, center);
+                ts_end = get_timestamp();
+
+                avgUsual += (ts_end - ts_start);
+
+                cout << "[!] Usual Gaussian sampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+                cout << "[>] Sample from the lattice: " << sample << endl;
+
+            }//end-for
+
+            BTilde.kill();
+            center.kill();
+            sample.kill();
+
+            cout << endl;
+            if(nIterations > 1) {
+                cout << "[!] Klein's average running time: " << (float)(avgKlein/((float)(nIterations)*1000000000.0)) << " s." << endl;
+                cout << "[!] Usual Gaussian sampler average running time: " << (float)(avgUsual/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
+            }//end-if                                
+
+            /* Computing parameters r and s of Peikert's offline phase */
+            R = log(m*n)/log(2);
+            s = R*(R*normOfB + 1);    
+            NTL::mul(s, s, s);
+
+            RR factor;
+            NTL::div(factor, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
+
+            mat_RR Sigma;
+            Sigma.SetDims(m*n, m*n);
+            for(int i = 0; i < Sigma.NumRows(); i++)
+                NTL::mul(Sigma[i][i], s, factor);
+
+            /* Computing the Peikert's algorithm offline phase */
+            mat_RR B2;
+            mat_ZZ Z;
+            ts_start = get_timestamp();    
+            int outputOfflinePeikert = hibe->GetSampler()->OfflinePeikert(Z, B2, S, q, R, Sigma, m*n, precision);    
+            ts_end = get_timestamp();
+
+            mat_ZZ_p Z_p;
+            NTL::conv(Z_p, Z);
+            Z.kill();
+            S.kill();    
+            Sigma.kill();
+
+            cout << "[!] Offline phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+
+            RR v = hibe->GetSampler()->ZCreatePartition(64, factor, precision, to_RR(tailcut));
+
+            mat_ZZ_p S_p;
+            vec_ZZ x2;
+            NTL::conv(S_p, S);    
+
+            nIterations = 10;
+            if(outputOfflinePeikert == 0) {        
+
+                vec_ZZ_p c_p, x2_p;
+                vec_ZZ center, sample;    
+                center.SetLength(S_p.NumRows());
+
+                for(int it = 0; it < nIterations; it++) {
+
+                    // Getting a fresh vector x2
+                    ts_start = get_timestamp();        
+                    x2 = hibe->GetSampler()->RefreshPeikert(B2, R, v, m*n, precision);
+                    ts_end = get_timestamp();    
+
+                    cout << "[!] Refreshing phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+
+                    avgRefreshing += (ts_end - ts_start);
+
+                    for(int i = 0; i < center.length(); i++)
+                        center[i] = RandomBnd(q);    
+
+                    NTL::conv(c_p, center);
+                    NTL::conv(x2_p, x2);
+
+                    /* Getting a sample from the lattice using the Peikert's algorithm */
+                    ts_start = get_timestamp();    
+                    sample = hibe->GetSampler()->Peikert(S_p, Z_p, c_p, x2_p, (long)q, R, precision);
+                    ts_end = get_timestamp();    
+
+                    avgPeikert += (ts_end - ts_start);
+
+                    cout << "[!] Peikert running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+                    cout << "[>] Sample from the lattice: " << sample << endl;
+
+                }//end-for
+
+                cout << endl;
+                if(nIterations > 1) {
+                    cout << "Refreshing phase of Peikert's algorithm average running time: " << (float)(avgRefreshing/((float)(nIterations)*1000000000.0)) << " s." << endl;
+                    cout << "Peikert average running time: " << (float)(avgPeikert/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
+                }//end-if
+
+                c_p.kill();
+                x2_p.kill();
+                center.kill();
+                sample.kill();
+
+            }//end-if
+
+            B2.kill();
+            x2.kill();
+            S_p.kill();
+            Z_p.kill();
+            
+            break;
+            
+        }//end-case-1
         
-        c_p.kill();
-        x2_p.kill();
-        center.kill();
-        sample.kill();
-        
-    }//end-if
-    
-    B2.kill();
-    x2.kill();
-    S_p.kill();
-    Z_p.kill();
+        default:
+            break;
+            
+    }//end-switch
     
     delete(hibe);
     
