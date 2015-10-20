@@ -26,7 +26,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 3;
+    int parameter_set_id = 4;
     
     switch(parameter_set_id) {
         case 0: {
@@ -141,6 +141,7 @@ int main(void) {
     
     int m = hibe->GetM();
     int n = hibe->GetN();
+    int length = m*n;
     
     /* Short basis expansion using the Rot_f operator */
     hibe->GetSampler()->RotBasis(S, hibe->GetMsk(), hibe->GetN());
@@ -180,11 +181,11 @@ int main(void) {
             Bn = OrthoBasis[OrthoBasis.NumRows()-1];                        
             OrthoBasis.kill();
             
-            center.SetLength(m*n);
+            center.SetLength(length);
             for(int i = 0; i < center.length(); i++)
                 center[i] = to_RR(0);                
             
-            RR sigma = log(m*n)*BTilde_norm;
+            RR sigma = log(length)*BTilde_norm;
 
             ts_start = get_timestamp();    
             sample = hibe->GetSampler()->CompactGaussianSampler(B, center, Bn, v, H, I, D, sigma, precision);
@@ -203,8 +204,9 @@ int main(void) {
             Bn.kill();
             
             break;
+            
         }//end-case-0
-        
+    
         case 1: {
             
             /*
@@ -226,11 +228,11 @@ int main(void) {
             return 0;
             
             vec_RR center;
-            center.SetLength(m*n);
-            for(int i = 0; i < m*n; i++)
+            center.SetLength(length);
+            for(int i = 0; i < length; i++)
                 center[i] = to_RR(NTL::RandomBnd(q));
 
-            RR sigmaRR = log(m*n)*BTilde_norm;
+            RR sigmaRR = log(length)*BTilde_norm;
             vec_RR sample;
 
             nIterations = 1;    
@@ -252,7 +254,7 @@ int main(void) {
                 avgUsual += (ts_end - ts_start);
 
                 cout << "[!] Usual Gaussian sampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
-                cout << "[>] Sample from the lattice: " << sample << endl;
+                cout << "[>] Sample from the latticlengthe: " << sample << endl;
 
             }//end-for
 
@@ -267,7 +269,7 @@ int main(void) {
             }//end-if                                
 
             /* Computing parameters r and s of Peikert's offline phase */
-            R = log(m*n)/log(2);
+            R = log(length)/log(2);
             s = R*(R*normOfB + 1);    
             NTL::mul(s, s, s);
 
@@ -275,7 +277,7 @@ int main(void) {
             NTL::div(factor, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
 
             mat_RR Sigma;
-            Sigma.SetDims(m*n, m*n);
+            Sigma.SetDims(length, length);
             for(int i = 0; i < Sigma.NumRows(); i++)
                 NTL::mul(Sigma[i][i], s, factor);
 
@@ -283,7 +285,7 @@ int main(void) {
             mat_RR B2;
             mat_ZZ Z;
             ts_start = get_timestamp();    
-            int outputOfflinePeikert = hibe->GetSampler()->OfflinePeikert(Z, B2, S, q, R, Sigma, m*n, precision);    
+            int outputOfflinePeikert = hibe->GetSampler()->OfflinePeikert(Z, B2, S, q, R, Sigma, length, precision);    
             ts_end = get_timestamp();
 
             mat_ZZ_p Z_p;
@@ -311,7 +313,7 @@ int main(void) {
 
                     // Getting a fresh vector x2
                     ts_start = get_timestamp();        
-                    x2 = hibe->GetSampler()->RefreshPeikert(B2, R, v, m*n, precision);
+                    x2 = hibe->GetSampler()->RefreshPeikert(B2, R, v, length, precision);
                     ts_end = get_timestamp();    
 
                     cout << "[!] Refreshing phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -358,8 +360,9 @@ int main(void) {
             
         }//end-case-1
         
-        default:
+        default: {
             break;
+        }
             
     }//end-switch
     

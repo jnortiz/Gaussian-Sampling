@@ -17,16 +17,8 @@
 #include <stdio.h>
 #include <NTL/ZZX.h>
 
-typedef unsigned long long timestamp_t;
-
 using namespace NTL;
 using namespace std;
-
-static timestamp_t get_timestamp() {
-    struct timespec now;
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
-    return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
-}//end-get_timestamp()
 
 Samplers::Samplers(int q, const ZZ_pX& f) {
      
@@ -56,13 +48,7 @@ Samplers::~Samplers() {
     this->begin.kill();
     this->X.kill();
     this->f.kill();
-};
-
-ZZ mod(const ZZ& x, int q) {
-    ZZ a = x % to_ZZ(q);
-    NTL::sub(a, a, to_ZZ(ceil(to_RR(q/2))+1));
-    return a;
-}//end-mod()
+}
 
 RR Samplers::Probability(RR x, RR sigma, RR c) {
     
@@ -640,20 +626,6 @@ vec_RR Samplers::GaussianSamplerFromLattice(const mat_ZZ& B, const mat_RR& BTild
     
 }//end-GaussianSamplerFromLattice()
 
-int IsZero(int x) {
-    unsigned zero;
-    zero = x;
-    zero = 1 ^ ((zero | -zero) >> 31) & 1;
-    return zero;    
-}//end-isZero()
-
-unsigned lessThan(int x, int y) {    
-    unsigned less;    
-    less = x-y;
-    less >>= sizeof(int)*8-1;    
-    return less;        
-}//end-lessThan()
-
 vec_RR Samplers::Klein(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, long precision, int tailcut, const vec_RR center) {
 
     cout << "\n[*] Klein's sampler status: ";
@@ -727,14 +699,8 @@ int Samplers::OfflinePeikert(mat_ZZ& Z, mat_RR& B2, const mat_ZZ& B, int q, RR r
     NTL::div(factor, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
     
     ZZ d;
-    mat_ZZ invB;
-    
-    timestamp_t ts_start, ts_end;
-    
-    ts_start = get_timestamp();
+    mat_ZZ invB;    
     NTL::inv(d, invB, B, 0);
-    ts_end = get_timestamp();            
-    cout << "[!] Inversion running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
     
     mat_RR aux_invB;
     conv(aux_invB, invB);
@@ -819,11 +785,11 @@ vec_ZZ Samplers::RefreshPeikert(const mat_RR& B2, RR r, RR v, int n, long precis
 }//end-RefreshSampleD()
 
 vec_ZZ Samplers::Peikert(const mat_ZZ_p& B, const mat_ZZ_p Z, const vec_ZZ_p& c, const vec_ZZ_p& x2, long q, RR r, long precision) {
-
+    
     RR::SetPrecision(precision);
     
     vec_ZZ_p subt, mult;
-    NTL::sub(subt, c, x2);
+    NTL::sub(subt, c, x2);    
     NTL::mul(mult, Z, subt);
     subt.kill();
     
