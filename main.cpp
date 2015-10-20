@@ -26,7 +26,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 4;
+    int parameter_set_id = 2;
     
     switch(parameter_set_id) {
         case 0: {
@@ -137,7 +137,7 @@ int main(void) {
         cout << "Setup average running time: " << (float)(avgSetup/((float)(nIterations)*1000000000.0)) << " s." << endl;   
         
     mat_ZZ S;
-    RR BTilde_norm, normOfB, R, s;
+    RR BTilde_norm, normOfB;
     
     int m = hibe->GetM();
     int n = hibe->GetN();
@@ -170,9 +170,9 @@ int main(void) {
 
             cout << "[!] Gram-Schmidt process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
 
-            vec_RR H, I, v;            
+            vec_RR I, v;            
             ts_start = get_timestamp();    
-            hibe->GetSampler()->PrepareToSampleCGS(v, H, I, OrthoBasis, D, B[0], precision);
+            hibe->GetSampler()->PrepareToSampleCGS(v, I, OrthoBasis, D, B[0], precision);
             ts_end = get_timestamp();
 
             cout << "[!] PrepareToSampleCGS running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -188,7 +188,7 @@ int main(void) {
             RR sigma = log(length)*BTilde_norm;
 
             ts_start = get_timestamp();    
-            sample = hibe->GetSampler()->CompactGaussianSampler(B, center, Bn, v, H, I, D, sigma, precision);
+            sample = hibe->GetSampler()->CompactGaussianSampler(B, center, Bn, v, I, D, sigma, precision);
             ts_end = get_timestamp();
 
             cout << "[!] Compact-Gaussian-Sampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -198,7 +198,6 @@ int main(void) {
             S.kill();
             center.kill();
             v.kill();
-            H.kill();
             I.kill();
             D.kill();
             Bn.kill();
@@ -210,7 +209,7 @@ int main(void) {
         case 1: {
             
             /*
-             * Klein's and Peikert's Gaussian samplers
+             * Klein's Gaussian sampler
              */
             
             /* Getting the [norm of the] Gram-Schmidt orthogonalization of S */
@@ -222,11 +221,7 @@ int main(void) {
 
             cout << "[!] GramSchmidt Process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
             cout << "[!] Norm of the orthogonal basis: " << BTilde_norm << endl;
-
-            cout << BTilde << endl;
-            
-            return 0;
-            
+                        
             vec_RR center;
             center.SetLength(length);
             for(int i = 0; i < length; i++)
@@ -246,15 +241,15 @@ int main(void) {
 
                 cout << "[!] Klein's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
                 cout << "[>] Sample from the lattice: " << sample << endl;
-
-                ts_start = get_timestamp();    
-                sample = hibe->GetSampler()->GaussianSamplerFromLattice(S, BTilde, sigmaRR, precision, tailcut, center);
-                ts_end = get_timestamp();
-
-                avgUsual += (ts_end - ts_start);
-
-                cout << "[!] Usual Gaussian sampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
-                cout << "[>] Sample from the latticlengthe: " << sample << endl;
+                
+//                ts_start = get_timestamp();    
+//                sample = hibe->GetSampler()->GaussianSamplerFromLattice(S, BTilde, sigmaRR, precision, tailcut, center);
+//                ts_end = get_timestamp();
+//
+//                avgUsual += (ts_end - ts_start);
+//
+//                cout << "[!] Usual Gaussian sampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+//                cout << "[>] Sample from the lattice: " << sample << endl;
 
             }//end-for
 
@@ -265,10 +260,20 @@ int main(void) {
             cout << endl;
             if(nIterations > 1) {
                 cout << "[!] Klein's average running time: " << (float)(avgKlein/((float)(nIterations)*1000000000.0)) << " s." << endl;
-                cout << "[!] Usual Gaussian sampler average running time: " << (float)(avgUsual/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
-            }//end-if                                
-
-            /* Computing parameters r and s of Peikert's offline phase */
+//                cout << "[!] Usual Gaussian sampler average running time: " << (float)(avgUsual/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
+            }//end-if    
+                        
+            break;
+            
+        }//end-case-1
+        
+        case 2: {
+            
+            /*
+             * Peikert's method for Gaussian sampling from q-ary lattices 
+             */
+            RR R, s;
+            
             R = log(length)/log(2);
             s = R*(R*normOfB + 1);    
             NTL::mul(s, s, s);
@@ -291,7 +296,6 @@ int main(void) {
             mat_ZZ_p Z_p;
             NTL::conv(Z_p, Z);
             Z.kill();
-            S.kill();    
             Sigma.kill();
 
             cout << "[!] Offline phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -301,8 +305,9 @@ int main(void) {
             mat_ZZ_p S_p;
             vec_ZZ x2;
             NTL::conv(S_p, S);    
+            S.kill();    
 
-            nIterations = 10;
+            nIterations = 1;
             if(outputOfflinePeikert == 0) {        
 
                 vec_ZZ_p c_p, x2_p;
@@ -350,15 +355,15 @@ int main(void) {
                 sample.kill();
 
             }//end-if
-
+            
             B2.kill();
             x2.kill();
             S_p.kill();
-            Z_p.kill();
+            Z_p.kill();            
             
             break;
             
-        }//end-case-1
+        }//end-case-2
         
         default: {
             break;

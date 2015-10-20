@@ -890,14 +890,14 @@ int Samplers::CholeskyDecomposition(mat_RR& B, const mat_RR& A, int n) {
     
 }//end-CholeskyDecomposition()
 
-vec_RR Samplers::CompactGaussianSampler(const mat_RR& B, const vec_RR center, const vec_RR& BTildeN, const vec_RR& Vn, const vec_RR& H, const vec_RR& I, const vec_RR& D, RR sigma, long precision) {
+vec_RR Samplers::CompactGaussianSampler(const mat_RR& B, const vec_RR center, const vec_RR& BTildeN, const vec_RR& Vn, const vec_RR& I, const vec_RR& D, RR sigma, long precision) {
 
     cout << "\n[*] Compact-Gaussian-Sampler status: ";
     
     RR::SetPrecision(precision);
     
     vec_RR aux_b, b, c, mult, mult1, sample, sum, v;
-    RR ci, innerp, sigmai;
+    RR ci, innerp, H, sigmai;
     double z;
     int cols, i, rows;
     
@@ -922,13 +922,14 @@ vec_RR Samplers::CompactGaussianSampler(const mat_RR& B, const vec_RR center, co
         NTL::mul(mult, B[i], (double)z);
         NTL::sub(c, c, mult);
         
+        NTL::div(H, D[i-1], D[i]);
         NTL::mul(mult, v, I[i-1]);
-        NTL::mul(mult1, b, H[i-1]);
+        NTL::mul(mult1, b, H);
         NTL::add(sum, mult1, mult); 
         aux_b = b;
         b = this->InvIsometry(sum);        
 
-        NTL::mul(mult, v, H[i-1]);
+        NTL::mul(mult, v, H);
         NTL::mul(mult1, aux_b, I[i-1]);
         NTL::add(v, mult1, mult);                
         
@@ -960,12 +961,11 @@ vec_RR Samplers::CompactGaussianSampler(const mat_RR& B, const vec_RR center, co
     
 }//end-CompactGaussianSampler()
 
-void Samplers::PrepareToSampleCGS(vec_RR& v, vec_RR& H, vec_RR& I, const mat_RR& BTilde, const vec_RR& D, const vec_RR& B1, long precision) {
+void Samplers::PrepareToSampleCGS(vec_RR& v, vec_RR& I, const mat_RR& BTilde, const vec_RR& D, const vec_RR& B1, long precision) {
     
     /**
      * 
      * @param v
-     * @param H
      * @param I
      * @param BTilde - The orthogonal basis of B
      * @param D - It contains the squared norm of each vector in the orthogonal basis ~B
@@ -984,7 +984,6 @@ void Samplers::PrepareToSampleCGS(vec_RR& v, vec_RR& H, vec_RR& I, const mat_RR&
     cols = BTilde.NumCols();
     rows = BTilde.NumRows();
     
-    H.SetLength(rows-1);
     I.SetLength(rows-1);    
     isometry.SetLength(cols);
     aux_v.SetLength(cols);
@@ -993,7 +992,6 @@ void Samplers::PrepareToSampleCGS(vec_RR& v, vec_RR& H, vec_RR& I, const mat_RR&
     for(i = 0; i < (rows-1); i++) {
         isometry = this->Isometry(BTilde[i]);
         NTL::InnerProduct(C, aux_v, isometry);
-        div(H[i], D[i], D[i+1]);        
         div(I[i], C, D[i+1]);
         div(di, C, D[i]);
         mul(mult, isometry, di);

@@ -24,8 +24,8 @@ public:
     Samplers(int q, const ZZ_pX& f);
     virtual ~Samplers();
         
-    vec_RR CompactGaussianSampler(const mat_RR& B, const vec_RR center, const vec_RR& BTildeN, const vec_RR& Vn, const vec_RR& H, const vec_RR& I, const vec_RR& D, RR sigma, long precision);
-    void PrepareToSampleCGS(vec_RR& v, vec_RR& H, vec_RR& I, const mat_RR& BTilde, const vec_RR& D, const vec_RR& B1, long precision);
+    vec_RR CompactGaussianSampler(const mat_RR& B, const vec_RR center, const vec_RR& BTildeN, const vec_RR& Vn, const vec_RR& D, const vec_RR& I, RR sigma, long precision);
+    void PrepareToSampleCGS(vec_RR& v, vec_RR& I, const mat_RR& BTilde, const vec_RR& D, const vec_RR& B1, long precision);
     
     /* Generic algorithm for GSO basis construction */
     RR GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precision);
