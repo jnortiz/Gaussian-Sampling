@@ -26,7 +26,7 @@ int main(void) {
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 2;
+    int parameter_set_id = 1;
     
     switch(parameter_set_id) {
         case 0: {
@@ -151,7 +151,7 @@ int main(void) {
     NTL::conv(B, S);    
     normOfB = hibe->GetSampler()->NormOfBasis(B);
     
-    int procedure_id = 0;
+    int procedure_id = 2;
     
     switch(procedure_id) {
         
@@ -209,7 +209,7 @@ int main(void) {
         case 1: {
             
             /*
-             * Klein's Gaussian sampler
+             * Klein's and usual Gaussian samplers
              */
             
             /* Getting the [norm of the] Gram-Schmidt orthogonalization of S */
@@ -217,9 +217,10 @@ int main(void) {
             ts_start = get_timestamp();
             BTilde_norm = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, precision);
             ts_end = get_timestamp();    
+                        
             B.kill();
 
-            cout << "[!] GramSchmidt Process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+            cout << "[!] Gram-Schmidt process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
             cout << "[!] Norm of the orthogonal basis: " << BTilde_norm << endl;
                         
             vec_RR center;
@@ -242,14 +243,14 @@ int main(void) {
                 cout << "[!] Klein's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
                 cout << "[>] Sample from the lattice: " << sample << endl;
                 
-//                ts_start = get_timestamp();    
-//                sample = hibe->GetSampler()->GaussianSamplerFromLattice(S, BTilde, sigmaRR, precision, tailcut, center);
-//                ts_end = get_timestamp();
-//
-//                avgUsual += (ts_end - ts_start);
-//
-//                cout << "[!] Usual Gaussian sampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
-//                cout << "[>] Sample from the lattice: " << sample << endl;
+                ts_start = get_timestamp();    
+                sample = hibe->GetSampler()->GaussianSamplerFromLattice(S, BTilde, sigmaRR, precision, tailcut, center);
+                ts_end = get_timestamp();
+
+                avgUsual += (ts_end - ts_start);
+
+                cout << "[!] Usual Gaussian sampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+                cout << "[>] Sample from the lattice: " << sample << endl;
 
             }//end-for
 
@@ -260,7 +261,7 @@ int main(void) {
             cout << endl;
             if(nIterations > 1) {
                 cout << "[!] Klein's average running time: " << (float)(avgKlein/((float)(nIterations)*1000000000.0)) << " s." << endl;
-//                cout << "[!] Usual Gaussian sampler average running time: " << (float)(avgUsual/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
+                cout << "[!] Usual Gaussian sampler average running time: " << (float)(avgUsual/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
             }//end-if    
                         
             break;
@@ -272,10 +273,11 @@ int main(void) {
             /*
              * Peikert's method for Gaussian sampling from q-ary lattices 
              */
+                        
             RR R, s;
             
             R = log(length)/log(2);
-            s = R*(R*normOfB + 1);    
+            s = R*(2*length*normOfB + 1);  
             NTL::mul(s, s, s);
 
             RR factor;
@@ -321,7 +323,7 @@ int main(void) {
                     x2 = hibe->GetSampler()->RefreshPeikert(B2, R, v, length, precision);
                     ts_end = get_timestamp();    
 
-                    cout << "[!] Refreshing phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+                    cout << "\n[!] Refreshing phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
 
                     avgRefreshing += (ts_end - ts_start);
 
@@ -338,7 +340,7 @@ int main(void) {
 
                     avgPeikert += (ts_end - ts_start);
 
-                    cout << "[!] Peikert running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
+                    cout << "\n[!] Peikert running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;
                     cout << "[>] Sample from the lattice: " << sample << endl;
 
                 }//end-for
