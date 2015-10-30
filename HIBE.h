@@ -26,12 +26,6 @@ public:
     /* HIBE algorithms */
     void Setup(int h);
 
-// Ongoing:    
-//    void KeyDerive();
-// TODO:    
-//    void Encrypt();
-//    void Decrypt();
-        
     /* Getters of Setup algorithm */
     long GetM() { return m; }    
     long GetN() { return n; }
@@ -46,7 +40,6 @@ public:
     Vec<Vec<ZZ_pX> > GetA_prime() const { return A_prime; }
     Vec<ZZ_pX> GetB() const { return B; }
     ZZ_pX GetU() const { return u; }
-    Samplers* GetSampler() const { return sampler; }
     
 private:
     /* Global parameters */
@@ -68,9 +61,6 @@ private:
     
     /* Master secret key */
     Vec< Vec<ZZX> > msk;
-    
-    /* Sampling from Gaussian distributions */
-    Samplers *sampler;
     
     /* Methods */
     int IdealTrapGen();   

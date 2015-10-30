@@ -23,6 +23,25 @@
 using namespace NTL;
 using namespace std;
 
+Samplers::Samplers() {
+    
+    int randint;
+    int bytes_read;
+    int fd = open("/dev/urandom", O_RDONLY);
+    
+    if (fd != -1) {
+        bytes_read = read(fd, &randint, sizeof(randint));
+        if (bytes_read != sizeof(randint))            
+            fprintf(stderr, "read() failed (%d bytes read)\n", bytes_read);
+    } else        
+        fprintf(stderr, "open() failed\n");
+    
+    close(fd);
+          
+    NTL::SetSeed(to_ZZ(randint));    
+    
+}//end-Samplers()
+
 Samplers::Samplers(int q, const ZZ_pX& f) {
     
     int randint;
@@ -340,7 +359,7 @@ RR Samplers::DZRecursion(Vec<RR>& X, Vec<RR>& Y, int m, int tail, RR c, RR sigma
 
 /* Using the Knuth-Yao algorithm, it produces a n-dimension polynomial 
  * with coefficients from the Gaussian distribution */
-Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma, RR c) {
+Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, float tailcut, RR sigma, RR c) {
     
     
     cout << "\n[*] Knuth-Yao Gaussian sampling" << endl;
@@ -352,7 +371,7 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
     int bound, center, sample;
     
     polynomial.SetLength((long)dimension);
-    bound = tailcut*to_int(sigma);
+    bound = ((int)tailcut)*to_int(sigma);
     center = to_int(c);
     
     for(int i = 0; i < dimension; i++) {
@@ -367,13 +386,13 @@ Vec<int> Samplers::PolyGeneratorKnuthYao(int dimension, int precision, int tailc
 }//end-PolyGeneratorKnuthYao()
 
 /* Knuth-Yao algorithm to obtain a sample from the discrete Gaussian */
-int Samplers::KnuthYao(int tailcut, RR sigma, RR c) {
+int Samplers::KnuthYao(float tailcut, RR sigma, RR c) {
 
     int bound, center, col, d, invalidSample, pNumRows, pNumCols, S, signal;
     unsigned enable, hit;
     unsigned long r;
     
-    bound = tailcut*to_int(sigma);
+    bound = ((int)tailcut)*to_int(sigma);
     center = to_int(c);
     d = 0; //Distance
     hit = 0;
@@ -429,7 +448,7 @@ int Samplers::KnuthYao(int tailcut, RR sigma, RR c) {
 
 /* This method build the probability matrix for samples in the range 
  * [-tailcut*\floor(sigma), +tailcut*\floor(sigma)] */
-void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c) {
+void Samplers::BuildProbabilityMatrix(int precision, float tailcut, RR sigma, RR c) {
     
     RR::SetPrecision(to_long(precision));
 
@@ -441,7 +460,7 @@ void Samplers::BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c
     vec_RR probOfX;
     RR pow;
     
-    bound = tailcut*to_int(sigma);
+    bound = ((int)tailcut)*to_int(sigma);
     
     probOfX.SetLength(bound+1);
        
@@ -512,7 +531,7 @@ void Samplers::BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precis
             
 }//end-BinaryExpansion()
 
-ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n) {
+ZZX Samplers::GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, float tailcut, ZZX center, int n) {
 
     // Precision of floating point operations
     RR::SetPrecision(precision);    

@@ -24,12 +24,13 @@ using namespace NTL;
 class Samplers {
 public:
        
+    Samplers();
     Samplers(int q, const ZZ_pX& f);
     virtual ~Samplers();
     
     /* Polynomial generation with coefficient sampled from a discrete Gaussian distribution */
     Vec<int> PolyGeneratorZiggurat(int dimension, int m, RR sigma, int omega, int n, int tail);
-    Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, int tailcut, RR sigma, RR c);
+    Vec<int> PolyGeneratorKnuthYao(int dimension, int precision, float tailcut, RR sigma, RR c);
     
     void Rot(Vec<ZZX>& A, const Vec<ZZ_pX>& a, int m, int n);
 
@@ -37,7 +38,7 @@ public:
     RR BlockGSO(mat_RR& BTilde, const Vec<ZZX>& B, int m, int n, int precision);
     
     /* Sampling from the discrete Gaussian distribution D_{\Lambda, \sigma, c}*/
-    ZZX GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, int tailcut, ZZX center, int n);
+    ZZX GaussianSamplerFromLattice(const Vec<ZZX>& B, const mat_RR& BTilde, RR sigma, int precision, float tailcut, ZZX center, int n);
         
 private:
         
@@ -59,7 +60,7 @@ private:
     void FasterIsometricGSO(mat_RR& BTilde, const mat_RR& B);    
 
     /* Sampling from a discrete Gaussian distribution over the integers */
-    int KnuthYao(int tailcut, RR sigma, RR c);
+    int KnuthYao(float tailcut, RR sigma, RR c);
     int Ziggurat(int m, int n, RR sigma, int omega);
     
     /* Auxiliary functions of Ziggurat algorithm */
@@ -70,7 +71,7 @@ private:
     
     /* Auxiliary functions of Knuth-Yao algorithm */
     void BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precision, int index);
-    void BuildProbabilityMatrix(int precision, int tailcut, RR sigma, RR c);
+    void BuildProbabilityMatrix(int precision, float tailcut, RR sigma, RR c);
     RR Probability(RR x, RR sigma, RR c);
 
     /* Auxiliary functions of lattice sampler */    
