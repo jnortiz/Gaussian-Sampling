@@ -38,7 +38,6 @@ public:
     Vec<ZZ_pX> GetB() const { return B; }
     ZZ_pX GetU() const { return u; }
     Vec<Vec<ZZX> > GetMsk() const { return msk; }
-    Samplers* GetSampler() const { return sampler; }
     
 private:
     /* Global parameters */
@@ -60,10 +59,7 @@ private:
     
     /* Master secret key */
     Vec< Vec<ZZX> > msk;
-    
-    /* Sampling from Gaussian distributions */
-    Samplers *sampler;
-    
+        
     /* Methods */
     int IdealTrapGen();   
     

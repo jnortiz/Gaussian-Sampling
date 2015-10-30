@@ -20,13 +20,13 @@ static timestamp_t get_timestamp() {
 }//end-get_timestamp()
 
 int main(void) {
-
+    
     timestamp_t ts_start, ts_end;
     int h, k;
     double lambda;
     int m1, m2, q, r;
 
-    int parameter_set_id = 1;
+    int parameter_set_id = 4;
     
     switch(parameter_set_id) {
         case 0: {
@@ -108,17 +108,29 @@ int main(void) {
         return -1;
     }//end-if
     
-    HIBE *hibe = new HIBE(q, m1, m2, k); // Parameters required only in Gaussian sampling from lattices  
+    HIBE *hibe = new HIBE(q, m1, m2, k);  
+    
+    int m = hibe->GetM();
+    int n = hibe->GetN();
+    
+    ZZ_pX f;
+    f.SetLength(n+1);
+    SetCoeff(f, 0, 1);
+    SetCoeff(f, n, 1);    
+    
+    Samplers *samplers = new Samplers(q, f);
     
     timestamp_t avgSetup = 0.0, avgRefreshing = 0.0, avgPeikert = 0.0;            
     timestamp_t avgKlein = 0.0, avgUsual = 0.0;
     
-    int nIterations, security_level, tailcut;
+    int nIterations, tailcut;
     long precision;
 
-    security_level = 128;    
-    /* (Saarinen, 2015) argues that half of the desired security level is almost always sufficient. */
-    precision = security_level/2; 
+//    /* (Saarinen, 2015) argues that half of the desired security level is almost always sufficient. */
+//    int security_level = 128;    
+//    precision = security_level/2; 
+    
+    precision = 107;
     tailcut = 13;
     nIterations = 1;
 
@@ -139,17 +151,15 @@ int main(void) {
     mat_ZZ S;
     RR BTilde_norm, normOfB;
     
-    int m = hibe->GetM();
-    int n = hibe->GetN();
     int length = m*n;
     
     /* Short basis expansion using the Rot_f operator */
-    hibe->GetSampler()->RotBasis(S, hibe->GetMsk(), hibe->GetN());
+    samplers->RotBasis(S, hibe->GetMsk(), n);
     
     /* Getting the norm of S */
     mat_RR B;
     NTL::conv(B, S);    
-    normOfB = hibe->GetSampler()->NormOfBasis(B);
+    normOfB = samplers->NormOfBasis(B);
     
     int procedure_id = 2;
     
@@ -165,14 +175,14 @@ int main(void) {
             vec_RR D;
                             
             ts_start = get_timestamp();    
-            BTilde_norm = hibe->GetSampler()->GramSchmidtProcess(OrthoBasis, D, B, precision);
+            BTilde_norm = samplers->GramSchmidtProcess(OrthoBasis, D, B, precision);
             ts_end = get_timestamp();
 
             cout << "[!] Gram-Schmidt process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
 
             vec_RR I, v;            
             ts_start = get_timestamp();    
-            hibe->GetSampler()->PrepareToSampleCGS(v, I, OrthoBasis, D, B[0], precision);
+            samplers->PrepareToSampleCGS(v, I, OrthoBasis, D, B[0], precision);
             ts_end = get_timestamp();
 
             cout << "[!] PrepareToSampleCGS running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -188,7 +198,7 @@ int main(void) {
             RR sigma = log(length)*BTilde_norm;
 
             ts_start = get_timestamp();    
-            sample = hibe->GetSampler()->CompactGaussianSampler(B, center, Bn, v, I, D, sigma, precision);
+            sample = samplers->CompactGaussianSampler(B, center, Bn, v, I, D, sigma, precision);
             ts_end = get_timestamp();
 
             cout << "[!] Compact-Gaussian-Sampler running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -209,15 +219,15 @@ int main(void) {
         case 1: {
             
             /*
-             * Klein's and usual Gaussian samplers
+             * Klein's Gaussian sampler
              */
-            
+                       
             /* Getting the [norm of the] Gram-Schmidt orthogonalization of S */
             mat_RR BTilde;
             ts_start = get_timestamp();
-            BTilde_norm = hibe->GetSampler()->GramSchmidtProcess(BTilde, B, precision);
-            ts_end = get_timestamp();    
-                        
+            BTilde_norm = samplers->GramSchmidtProcess(BTilde, B, precision);
+            ts_end = get_timestamp();
+            
             B.kill();
 
             cout << "[!] Gram-Schmidt process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -235,7 +245,7 @@ int main(void) {
             for(int it = 0; it < nIterations; it++) {
 
                 ts_start = get_timestamp();    
-                sample = hibe->GetSampler()->Klein(S, BTilde, sigmaRR, precision, tailcut, center);
+                sample = samplers->Klein(S, BTilde, sigmaRR, precision, tailcut, center);
                 ts_end = get_timestamp();
 
                 avgKlein += (ts_end - ts_start);
@@ -243,8 +253,50 @@ int main(void) {
                 cout << "[!] Klein's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
                 cout << "[>] Sample from the lattice: " << sample << endl;
                 
+            }//end-for
+
+            BTilde.kill();
+            center.kill();
+            sample.kill();
+
+            cout << endl;
+            if(nIterations > 1)
+                cout << "[!] Klein's average running time: " << (float)(avgKlein/((float)(nIterations)*1000000000.0)) << " s." << endl;
+                        
+            break;
+            
+        }//end-case-1
+        
+        case 2: {
+            
+            /*
+             * Usual Gaussian sampler
+             */
+                       
+            /* Getting the [norm of the] Gram-Schmidt orthogonalization of S */
+            mat_RR BTilde;
+            ts_start = get_timestamp();
+            BTilde_norm = samplers->GramSchmidtProcess(BTilde, B, precision);
+            ts_end = get_timestamp();
+            
+            B.kill();
+
+            cout << "[!] Gram-Schmidt process running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
+            cout << "[!] Norm of the orthogonal basis: " << BTilde_norm << endl;
+                        
+            vec_RR center;
+            center.SetLength(length);
+            for(int i = 0; i < length; i++)
+                center[i] = to_RR(NTL::RandomBnd(q));
+
+            RR sigmaRR = log(length)*BTilde_norm;
+            vec_RR sample;
+
+            nIterations = 1;    
+            for(int it = 0; it < nIterations; it++) {
+
                 ts_start = get_timestamp();    
-                sample = hibe->GetSampler()->GaussianSamplerFromLattice(S, BTilde, sigmaRR, precision, tailcut, center);
+                sample = samplers->GaussianSamplerFromLattice(S, BTilde, sigmaRR, precision, tailcut, center);
                 ts_end = get_timestamp();
 
                 avgUsual += (ts_end - ts_start);
@@ -259,16 +311,14 @@ int main(void) {
             sample.kill();
 
             cout << endl;
-            if(nIterations > 1) {
-                cout << "[!] Klein's average running time: " << (float)(avgKlein/((float)(nIterations)*1000000000.0)) << " s." << endl;
+            if(nIterations > 1)
                 cout << "[!] Usual Gaussian sampler average running time: " << (float)(avgUsual/((float)(nIterations)*1000000000.0)) << " s.\n" << endl;
-            }//end-if    
-                        
+            
             break;
             
-        }//end-case-1
+        }//end-case-2
         
-        case 2: {
+        case 3: {
             
             /*
              * Peikert's method for Gaussian sampling from q-ary lattices 
@@ -292,7 +342,7 @@ int main(void) {
             mat_RR B2;
             mat_ZZ Z;
             ts_start = get_timestamp();    
-            int outputOfflinePeikert = hibe->GetSampler()->OfflinePeikert(Z, B2, S, q, R, Sigma, length, precision);    
+            int outputOfflinePeikert = samplers->OfflinePeikert(Z, B2, S, q, R, Sigma, length, precision);    
             ts_end = get_timestamp();
 
             mat_ZZ_p Z_p;
@@ -302,14 +352,14 @@ int main(void) {
 
             cout << "[!] Offline phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
 
-            RR v = hibe->GetSampler()->ZCreatePartition(64, factor, precision, to_RR(tailcut));
+            RR v = samplers->ZCreatePartition(64, factor, precision, to_RR(tailcut));
 
             mat_ZZ_p S_p;
             vec_ZZ x2;
             NTL::conv(S_p, S);    
             S.kill();    
 
-            nIterations = 1;
+            nIterations = 10;
             if(outputOfflinePeikert == 0) {        
 
                 vec_ZZ_p c_p, x2_p;
@@ -320,7 +370,7 @@ int main(void) {
 
                     // Getting a fresh vector x2
                     ts_start = get_timestamp();        
-                    x2 = hibe->GetSampler()->RefreshPeikert(B2, R, v, length, precision);
+                    x2 = samplers->RefreshPeikert(B2, R, v, length, precision);
                     ts_end = get_timestamp();    
 
                     cout << "\n[!] Refreshing phase of Peikert's algorithm running time: " << (float)((ts_end - ts_start)/1000000000.0) << " s." << endl;    
@@ -335,7 +385,7 @@ int main(void) {
 
                     /* Getting a sample from the lattice using the Peikert's algorithm */
                     ts_start = get_timestamp();    
-                    sample = hibe->GetSampler()->Peikert(S_p, Z_p, c_p, x2_p, (long)q, R, precision);
+                    sample = samplers->Peikert(S_p, Z_p, c_p, x2_p, (long)q, R, precision);
                     ts_end = get_timestamp();    
 
                     avgPeikert += (ts_end - ts_start);
@@ -365,7 +415,7 @@ int main(void) {
             
             break;
             
-        }//end-case-2
+        }//end-case-3
         
         default: {
             break;

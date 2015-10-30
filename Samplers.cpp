@@ -415,10 +415,9 @@ RR Samplers::NewMarsagliaTailMethod(RR r) {
 // Usual algorithm for Gram-Schmidt orthogonalization
 RR Samplers::GramSchmidtProcess(mat_RR& T_ATilde, const mat_RR& T_A, long precision) {
     
-    RR::SetPrecision(precision);
-    
-    cout << "\n[!] Norm of short basis T: " << this->NormOfBasis(T_A) << endl;    
     cout << "[*] Gram-Schmidt process status: ";
+    
+    RR::SetPrecision(precision);
     
     mat_RR mu;
     vec_RR innerpT_ATilde, mult, sum;
