@@ -25,10 +25,15 @@ int main(void) {
     int security_level;
     float tailcut;
         
-    int security_level_id = 3;
+    int security_level_id = 0;
     
     // Parameters from (Saarinen, 2015)
     switch(security_level_id) {
+        case 0: {
+            security_level = 214; // For precision equal to 107 following (Roy, Vercauteren and Verbauwhede, 2013) work.
+            tailcut = 13;
+            break;
+        }
         case 1: {
             security_level = 100;
             tailcut = 8.1;
@@ -68,7 +73,7 @@ int main(void) {
     averageKnuthYao = 0.0;
 
     Vec<int> ZigguratPoly, KnuthPoly;
-    int nSamples = 1024; // #coefficients in the polynomial
+    int nSamples = 8194; // #coefficients in the polynomial
 
     int nIterations = 1000;
     for(int i = 0; i < nIterations; i++) {
