@@ -126,10 +126,7 @@ int main(void) {
     int nIterations, tailcut;
     long precision;
 
-//    /* (Saarinen, 2015) argues that half of the desired security level is almost always sufficient. */
-//    int security_level = 128;    
-//    precision = security_level/2; 
-    
+    // (Roy, Vercauteren and Verbauwhede, 2013): precision and sigma values for statistical distance less than 2^{-90}
     precision = 107;
     tailcut = 13;
     nIterations = 1;
