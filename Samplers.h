@@ -37,6 +37,7 @@ public:
     /* Klein's method */
     vec_RR Klein(const mat_ZZ& B, const mat_RR& BTilde, RR sigma, long precision, int tailcut, const vec_RR center);
     
+    RR Ziggurat(int m, RR sigma, long precision, RR v);
     RR ZCreatePartition(int m, RR sigma, long n, RR tail);
     
     /* Peikert's method */
@@ -65,7 +66,6 @@ private:
     RR Probability(RR x, RR sigma, RR c);
     
     /* Sampling from a continuous Gaussian distribution */
-    RR Ziggurat(int m, RR sigma, long precision, RR v);
     RR ZRecursion(Vec<RR>& X, int m, RR r, RR sigma, RR& v);
     RR NewMarsagliaTailMethod(RR r);
         

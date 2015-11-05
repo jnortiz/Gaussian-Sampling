@@ -158,7 +158,7 @@ int main(void) {
     NTL::conv(B, S);    
     normOfB = samplers->NormOfBasis(B);
     
-    int procedure_id = 2;
+    int procedure_id = 4;
     
     switch(procedure_id) {
         
@@ -414,6 +414,37 @@ int main(void) {
             
         }//end-case-3
         
+        case 4: {
+            
+            vec_RR samples;
+            timestamp_t avgZiggurat = 0.0;
+            int dimension = 8194, m = 128;            
+            RR factor, v;
+            
+            NTL::div(factor, to_RR(1), sqrt(2*NTL::ComputePi_RR()));
+            
+            samples.SetLength(dimension);            
+            
+            nIterations = 1000;
+            
+            for(int it = 0; it < nIterations; it++) {
+                cout << endl;
+                ts_start = get_timestamp();
+                v = samplers->ZCreatePartition(m, factor, precision, to_RR(tailcut));            
+                for(int j = 0; j < dimension; j++)
+                    samples[j] = samplers->Ziggurat(m, factor, precision, v);                
+                ts_end = get_timestamp();
+                avgZiggurat += (ts_end - ts_start);
+                cout << "[>] Continuous samples:" << samples << endl;
+            }//end-for
+            
+            if(nIterations > 1)
+                cout << "\n[!] (Continuous) Ziggurat algorithm average running time: " << (float)(avgZiggurat/((float)(nIterations)*1000000000.0)) << " s." << endl;
+            
+            samples.kill();            
+            break;
+            
+        }//end-case-4        
         default: {
             break;
         }
@@ -421,6 +452,7 @@ int main(void) {
     }//end-switch
     
     delete(hibe);
+    delete(samplers);
     
     return 0;
     
