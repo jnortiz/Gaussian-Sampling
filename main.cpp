@@ -5,10 +5,7 @@
  * Created on March 10, 2015, 2:12 PM
  */
 
-#include <cstdlib>
-#include <math.h>
-#include <NTL/RR.h>
-#include "HIBE.h"
+#include "Samplers.h"
 
 typedef unsigned long long timestamp_t;
 
@@ -73,12 +70,10 @@ int main(void) {
     averageKnuthYao = 0.0;
 
     Vec<int> ZigguratPoly, KnuthPoly;
-    int nSamples = 8194; // #coefficients in the polynomial
+    int nSamples = 2048; // #coefficients in the polynomial
 
-    int nIterations = 1000;
+    int nIterations = 2;
     for(int i = 0; i < nIterations; i++) {
-
-        cout << endl;
 
         ts_start = get_timestamp();            
         ZigguratPoly = samplers->PolyGeneratorZiggurat(nSamples, nRectangles, sigmaRR, omega, precision, tailcut); // Coefficients, rectangles, sigma, omega and precision
@@ -86,7 +81,7 @@ int main(void) {
 
         averageZiggurat += (ts_end - ts_start);
 
-//        cout << ZigguratPoly << endl;
+        cout << ZigguratPoly << endl;
 
         ts_start = get_timestamp();                        
         KnuthPoly = samplers->PolyGeneratorKnuthYao(nSamples, precision, tailcut, sigmaRR, c); // Coefficients, precision, tailcut, and sigma
@@ -94,12 +89,12 @@ int main(void) {
 
         averageKnuthYao += (ts_end - ts_start);
 
-//        cout << KnuthPoly << endl;
+        cout << KnuthPoly << endl;
 
     }//end-for
 
-    cout << "\nZiggurat average running time for " << nIterations << " iterations: " << (float)(averageZiggurat/((float)(nIterations)*1000000000.0)) << endl;
-    cout << "Knuth-Yao average running time for " << nIterations << " iterations: " << (float)(averageKnuthYao/((float)(nIterations)*1000000000.0)) << endl;
+    cout << "\n[!] Ziggurat average running time for " << nIterations << " iterations: " << (float)(averageZiggurat/((float)(nIterations)*1000000000.0)) << endl;
+    cout << "[!] Knuth-Yao average running time for " << nIterations << " iterations: " << (float)(averageKnuthYao/((float)(nIterations)*1000000000.0)) << endl;
 
     delete(samplers);
     

@@ -4,7 +4,6 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>HIBE.h</itemPath>
       <itemPath>Samplers.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
@@ -14,7 +13,6 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>HIBE.cpp</itemPath>
       <itemPath>Samplers.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
     </logicalFolder>
@@ -43,10 +41,6 @@
           <commandLine>-lntl -lgmp -lm</commandLine>
         </ccTool>
       </compileType>
-      <item path="HIBE.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="HIBE.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="Samplers.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Samplers.h" ex="false" tool="3" flavor2="0">
@@ -78,10 +72,6 @@
           <commandLine>-L$HOME/sw/lib -lntl -lgmp -lm</commandLine>
         </linkerTool>
       </compileType>
-      <item path="HIBE.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="HIBE.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="Samplers.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Samplers.h" ex="false" tool="3" flavor2="0">
